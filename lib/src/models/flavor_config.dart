@@ -82,7 +82,7 @@ final class FlavorConfig {
 
   /// Custom metadata to inject into platform manifests.
   ///
-  /// For Android, these will be added as <meta-data> entries in
+  /// For Android, these will be added as `<meta-data>` entries in
   /// AndroidManifest.xml.
   /// For iOS, these will be added to Info.plist.
   final Map<String, dynamic> metadata;

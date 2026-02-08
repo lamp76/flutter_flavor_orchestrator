@@ -7,7 +7,6 @@
 /// This library provides a clean, programmatic API for manipulating
 /// native configuration files, managing app flavors, and automating the
 /// build setup process.
-library flutter_flavor_orchestrator;
 
 export 'src/config_parser.dart';
 export 'src/models/flavor_config.dart';
