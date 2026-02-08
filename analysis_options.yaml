@@ -12,6 +12,7 @@ analyzer:
     missing_required_param: error
     missing_return: error
     invalid_annotation_target: ignore
+    dangling_library_doc_comments: ignore
 
 linter:
   rules:

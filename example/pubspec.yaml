@@ -2,7 +2,7 @@ name: example
 description: Example Flutter app demonstrating flutter_flavor_orchestrator usage.
 publish_to: 'none'
 
-version: 1.0.0+1
+version: 1.0.0+2
 
 environment:
   sdk: ^3.0.0
@@ -15,8 +15,9 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^3.0.0
-  flutter_flavor_orchestrator: ^0.1.0
+  flutter_lints: ^6.0.0
+  flutter_flavor_orchestrator: ^0.1.1
+  
 
 flutter:
   uses-material-design: true

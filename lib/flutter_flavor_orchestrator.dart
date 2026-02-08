@@ -1,4 +1,4 @@
-/// Flutter Flavor Orchestrator Library
+/// Flutter Flavor Orchestrator
 ///
 /// A comprehensive build-time orchestrator for managing Flutter flavors,
 /// native configurations, and provisioning files across Android and iOS
@@ -7,6 +7,7 @@
 /// This library provides a clean, programmatic API for manipulating
 /// native configuration files, managing app flavors, and automating the
 /// build setup process.
+library;
 
 export 'src/config_parser.dart';
 export 'src/models/flavor_config.dart';
