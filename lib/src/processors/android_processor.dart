@@ -123,9 +123,9 @@ final class AndroidProcessor {
     final manifestRegex = RegExp('<manifest([^>]*)>');
     if (manifestRegex.hasMatch(content)) {
       logger.warning('Package attribute not found, adding it to manifest');
-      return content.replaceFirst(
+      return content.replaceFirstMapped(
         manifestRegex,
-        '<manifest\$1 package="$bundleId">',
+        (match) => '<manifest${match.group(1)} package="$bundleId">',
       );
     }
 
@@ -154,9 +154,9 @@ final class AndroidProcessor {
     final applicationRegex = RegExp('<application([^>]*)>');
     if (applicationRegex.hasMatch(content)) {
       logger.warning('android:label not found, adding it to application');
-      return content.replaceFirst(
+      return content.replaceFirstMapped(
         applicationRegex,
-        '<application\$1 android:label="$appName">',
+        (match) => '<application${match.group(1)} android:label="$appName">',
       );
     }
 
@@ -214,9 +214,9 @@ final class AndroidProcessor {
         if (applicationEndRegex.hasMatch(updatedContent)) {
           final newMetadata =
               '$indent<meta-data android:name="$key" android:value="$value" />\n';
-          updatedContent = updatedContent.replaceFirst(
+          updatedContent = updatedContent.replaceFirstMapped(
             applicationEndRegex,
-            '$newMetadata\$1</application>',
+            (match) => '$newMetadata${match.group(1)}</application>',
           );
           logger.debug('Added metadata: $key = $value');
         } else {
