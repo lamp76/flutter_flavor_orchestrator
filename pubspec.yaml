@@ -1,0 +1,21 @@
+name: flutter_flavor_orchestrator
+description: A build-time orchestrator for managing Flutter flavors, native configurations, and provisioning files across Android and iOS platforms.
+version: 0.1.0
+repository: https://github.com/alessiolm/flutter_flavor_orchestrator
+homepage: https://github.com/alessiolm/flutter_flavor_orchestrator
+
+environment:
+  sdk: ^3.0.0
+
+dependencies:
+  args: ^2.4.2
+  yaml: ^3.1.2
+  xml: ^6.5.0
+  path: ^1.9.0
+
+dev_dependencies:
+  lints: ^3.0.0
+  test: ^1.25.0
+
+executables:
+  flutter_flavor_orchestrator:

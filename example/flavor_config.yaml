@@ -1,0 +1,128 @@
+# Flutter Flavor Orchestrator Configuration Example
+#
+# This file demonstrates all available configuration options for
+# flutter_flavor_orchestrator. Place this file in your project root
+# or add the flavor_config section to your pubspec.yaml.
+
+# Development flavor
+dev:
+  bundle_id: com.example.flavorapp.dev
+  app_name: FlavorApp Dev
+  icon_path: assets/icons/dev
+  
+  # Custom metadata to inject into native manifests
+  metadata:
+    API_URL: https://dev-api.example.com
+    API_KEY: dev_api_key_12345
+    ENABLE_LOGGING: true
+    ENVIRONMENT: development
+  
+  # Assets specific to this flavor
+  assets:
+    - assets/dev/
+    - assets/common/
+  
+  # Platform-specific SDK versions
+  android_min_sdk_version: 21
+  android_target_sdk_version: 33
+  android_compile_sdk_version: 33
+  
+  ios_min_version: "12.0"
+  
+  # Provisioning files (Firebase, etc.)
+  provisioning:
+    android_google_services: configs/dev/google-services.json
+    ios_google_service: configs/dev/GoogleService-Info.plist
+    additional_files:
+      android/app/src/main/res/values/dev_config.xml: configs/dev/android_config.xml
+  
+  # Custom Gradle configuration (Android)
+  custom_gradle_config:
+    defaultConfig: |
+      // Custom dev configuration
+      buildConfigField "String", "API_URL", "\"https://dev-api.example.com\""
+      buildConfigField "boolean", "ENABLE_LOGGING", "true"
+  
+  # Custom Info.plist entries (iOS)
+  custom_info_plist_entries:
+    API_URL: https://dev-api.example.com
+    ENABLE_LOGGING: true
+    NSAppTransportSecurity:
+      NSAllowsArbitraryLoads: true
+
+# Staging flavor
+staging:
+  bundle_id: com.example.flavorapp.staging
+  app_name: FlavorApp Staging
+  icon_path: assets/icons/staging
+  
+  metadata:
+    API_URL: https://staging-api.example.com
+    API_KEY: staging_api_key_67890
+    ENABLE_LOGGING: true
+    ENVIRONMENT: staging
+  
+  assets:
+    - assets/staging/
+    - assets/common/
+  
+  android_min_sdk_version: 21
+  android_target_sdk_version: 33
+  android_compile_sdk_version: 33
+  
+  ios_min_version: "13.0"
+  
+  provisioning:
+    android_google_services: configs/staging/google-services.json
+    ios_google_service: configs/staging/GoogleService-Info.plist
+  
+  custom_gradle_config:
+    defaultConfig: |
+      buildConfigField "String", "API_URL", "\"https://staging-api.example.com\""
+      buildConfigField "boolean", "ENABLE_LOGGING", "true"
+  
+  custom_info_plist_entries:
+    API_URL: https://staging-api.example.com
+    ENABLE_LOGGING: true
+
+# Production flavor
+production:
+  bundle_id: com.example.flavorapp
+  app_name: FlavorApp
+  icon_path: assets/icons/production
+  
+  metadata:
+    API_URL: https://api.example.com
+    API_KEY: production_api_key_secure
+    ENABLE_LOGGING: false
+    ENVIRONMENT: production
+  
+  assets:
+    - assets/production/
+    - assets/common/
+  
+  android_min_sdk_version: 21
+  android_target_sdk_version: 34
+  android_compile_sdk_version: 34
+  
+  ios_min_version: "13.0"
+  
+  provisioning:
+    android_google_services: configs/production/google-services.json
+    ios_google_service: configs/production/GoogleService-Info.plist
+  
+  custom_gradle_config:
+    defaultConfig: |
+      buildConfigField "String", "API_URL", "\"https://api.example.com\""
+      buildConfigField "boolean", "ENABLE_LOGGING", "false"
+    
+    buildTypes: |
+      release {
+          shrinkResources true
+          minifyEnabled true
+      }
+  
+  custom_info_plist_entries:
+    API_URL: https://api.example.com
+    ENABLE_LOGGING: false
+    ITSAppUsesNonExemptEncryption: false
