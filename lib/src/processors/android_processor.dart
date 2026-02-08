@@ -1,6 +1,5 @@
 import 'dart:io';
 import 'package:path/path.dart' as path;
-import 'package:xml/xml.dart';
 import '../models/flavor_config.dart';
 import '../utils/file_manager.dart';
 import '../utils/logger.dart';
@@ -80,73 +79,183 @@ final class AndroidProcessor {
       return;
     }
 
-    final manifestContent = await fileManager.readFile(manifestPath);
-    final document = XmlDocument.parse(manifestContent);
+    var manifestContent = await fileManager.readFile(manifestPath);
 
-    // Update package name and application label (app name)
-    final manifest = document.findElements('manifest').first
-      ..setAttribute('package', config.bundleId);
+    // Update package name using string replacement to preserve formatting
+    manifestContent = _updateManifestPackage(manifestContent, config.bundleId);
 
-    final application = manifest.findElements('application').firstOrNull;
-    if (application != null) {
-      application.setAttribute('android:label', config.appName);
-    }
+    // Update app name using string replacement to preserve formatting
+    manifestContent = _updateManifestAppName(manifestContent, config.appName);
 
     logger
       ..debug('Updated package name to: ${config.bundleId}')
       ..debug('Updated app name to: ${config.appName}');
 
-    if (application != null) {
-      // Add or update metadata entries
-      if (config.metadata.isNotEmpty) {
-        await _addMetadataToManifest(application, config.metadata);
-      }
+    // Add or update metadata entries
+    if (config.metadata.isNotEmpty) {
+      manifestContent =
+          _addMetadataToManifest(manifestContent, config.metadata);
     }
 
     // Write updated manifest
-    await fileManager.writeFile(
-      manifestPath,
-      document.toXmlString(pretty: true, indent: '    '),
-    );
+    await fileManager.writeFile(manifestPath, manifestContent);
 
     logger.success('AndroidManifest.xml updated');
   }
 
+  /// Updates the package attribute in the manifest element.
+  String _updateManifestPackage(String content, String bundleId) {
+    // Match package attribute in manifest tag with any whitespace
+    final packageRegex = RegExp(
+      r'(<manifest[^>]*?\s+package\s*=\s*")[^"]*(")',
+      multiLine: true,
+      dotAll: true,
+    );
+
+    if (packageRegex.hasMatch(content)) {
+      return content.replaceFirstMapped(
+        packageRegex,
+        (match) => '${match.group(1)}$bundleId${match.group(2)}',
+      );
+    }
+
+    // If package attribute doesn't exist, try to add it
+    final manifestRegex = RegExp('<manifest([^>]*)>');
+    if (manifestRegex.hasMatch(content)) {
+      logger.warning('Package attribute not found, adding it to manifest');
+      return content.replaceFirst(
+        manifestRegex,
+        '<manifest\$1 package="$bundleId">',
+      );
+    }
+
+    logger.warning('Could not update package name in AndroidManifest.xml');
+    return content;
+  }
+
+  /// Updates the android:label attribute in the application element.
+  String _updateManifestAppName(String content, String appName) {
+    // Match android:label attribute in application tag
+    // with any whitespace
+    final labelRegex = RegExp(
+      r'(<application[^>]*?\s+android:label\s*=\s*")[^"]*(")',
+      multiLine: true,
+      dotAll: true,
+    );
+
+    if (labelRegex.hasMatch(content)) {
+      return content.replaceFirstMapped(
+        labelRegex,
+        (match) => '${match.group(1)}$appName${match.group(2)}',
+      );
+    }
+
+    // If android:label doesn't exist, try to add it
+    final applicationRegex = RegExp('<application([^>]*)>');
+    if (applicationRegex.hasMatch(content)) {
+      logger.warning('android:label not found, adding it to application');
+      return content.replaceFirst(
+        applicationRegex,
+        '<application\$1 android:label="$appName">',
+      );
+    }
+
+    logger.warning('Could not update app name in AndroidManifest.xml');
+    return content;
+  }
+
   /// Adds metadata entries to the application element.
-  Future<void> _addMetadataToManifest(
-    XmlElement application,
+  String _addMetadataToManifest(
+    String content,
     Map<String, dynamic> metadata,
-  ) async {
+  ) {
     logger.debug('Adding metadata entries to AndroidManifest.xml...');
+
+    var updatedContent = content;
 
     for (final entry in metadata.entries) {
       final key = entry.key;
       final value = entry.value.toString();
 
-      // Check if metadata already exists
-      final existingMetadata = application.findElements('meta-data').where(
-            (element) => element.getAttribute('android:name') == key,
-          );
+      // Detect indentation by finding the application tag and its children
+      final indent = _detectMetadataIndentation(updatedContent);
 
-      if (existingMetadata.isNotEmpty) {
+      // Check if metadata already exists
+      final metadataRegex = RegExp(
+        r'<meta-data\s+android:name\s*=\s*"' +
+            RegExp.escape(key) +
+            r'"[^>]*android:value\s*=\s*"[^"]*"[^>]*/>',
+        multiLine: true,
+      );
+
+      // Alternative pattern where value comes before name
+      final metadataRegexAlt = RegExp(
+        '<meta-data\\s+android:value\\s*=\\s*"[^"]*"[^>]*android:name\\s*=\\s*"${RegExp.escape(key)}"[^>]*/>',
+        multiLine: true,
+      );
+
+      if (metadataRegex.hasMatch(updatedContent)) {
         // Update existing metadata
-        for (final element in existingMetadata) {
-          element.setAttribute('android:value', value);
-        }
+        updatedContent = updatedContent.replaceFirst(
+          metadataRegex,
+          '<meta-data android:name="$key" android:value="$value" />',
+        );
+        logger.debug('Updated metadata: $key = $value');
+      } else if (metadataRegexAlt.hasMatch(updatedContent)) {
+        // Update existing metadata (alternative pattern)
+        updatedContent = updatedContent.replaceFirst(
+          metadataRegexAlt,
+          '<meta-data android:name="$key" android:value="$value" />',
+        );
         logger.debug('Updated metadata: $key = $value');
       } else {
-        // Add new metadata
-        final metadataElement = XmlElement(
-          XmlName('meta-data'),
-          [
-            XmlAttribute(XmlName('android:name'), key),
-            XmlAttribute(XmlName('android:value'), value),
-          ],
-        );
-        application.children.add(metadataElement);
-        logger.debug('Added metadata: $key = $value');
+        // Add new metadata before closing application tag
+        final applicationEndRegex = RegExp(r'([ \t]*)</application>');
+        if (applicationEndRegex.hasMatch(updatedContent)) {
+          final newMetadata =
+              '$indent<meta-data android:name="$key" android:value="$value" />\n';
+          updatedContent = updatedContent.replaceFirst(
+            applicationEndRegex,
+            '$newMetadata\$1</application>',
+          );
+          logger.debug('Added metadata: $key = $value');
+        } else {
+          logger.warning('Could not add metadata: $key');
+        }
       }
     }
+
+    return updatedContent;
+  }
+
+  /// Detects the indentation used for children of the application element.
+  String _detectMetadataIndentation(String content) {
+    // Try to find existing meta-data or activity indentation
+    final metadataMatch = RegExp(r'\n([ \t]+)<meta-data').firstMatch(content);
+    if (metadataMatch != null) {
+      return metadataMatch.group(1)!;
+    }
+
+    final activityMatch = RegExp(r'\n([ \t]+)<activity').firstMatch(content);
+    if (activityMatch != null) {
+      return activityMatch.group(1)!;
+    }
+
+    // Try to find application tag and add default indentation
+    final applicationMatch =
+        RegExp(r'\n([ \t]*)<application').firstMatch(content);
+    if (applicationMatch != null) {
+      final baseIndent = applicationMatch.group(1)!;
+      // Add one level of indentation (assuming 4 spaces or 1 tab)
+      if (baseIndent.contains('\t')) {
+        return '$baseIndent\t';
+      } else {
+        return '$baseIndent    '; // 4 spaces
+      }
+    }
+
+    // Default to 8 spaces if nothing found
+    return '        ';
   }
 
   /// Processes build.gradle or build.gradle.kts file to add flavor

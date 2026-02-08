@@ -319,5 +319,232 @@ android {
       final gradleContent = await buildGradleFile.readAsString();
       expect(gradleContent, contains('applicationId "com.example.groovy"'));
     });
+
+    test('preserves AndroidManifest.xml indentation with spaces', () async {
+      // Create Android directory structure
+      final manifestDir = Directory(
+        '${tempDir.path}/android/app/src/main',
+      );
+      await manifestDir.create(recursive: true);
+
+      final manifestFile = File('${manifestDir.path}/AndroidManifest.xml');
+      const originalContent = r'''
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.example.old">
+    <uses-permission android:name="android.permission.INTERNET"/>
+    
+    <application
+        android:label="Old App"
+        android:name="${applicationName}"
+        android:icon="@mipmap/ic_launcher">
+        <activity
+            android:name=".MainActivity">
+        </activity>
+    </application>
+</manifest>''';
+      await manifestFile.writeAsString(originalContent);
+
+      const config = FlavorConfig(
+        name: 'dev',
+        bundleId: 'com.example.dev',
+        appName: 'App Dev',
+      );
+
+      await processor.process(tempDir.path, config);
+
+      final updatedContent = await manifestFile.readAsString();
+
+      // Verify package and label were updated
+      expect(updatedContent, contains('package="com.example.dev"'));
+      expect(updatedContent, contains('android:label="App Dev"'));
+
+      // Verify indentation is preserved
+      // (4 spaces for application, 8 for activity)
+      expect(updatedContent, contains('\n    <application'));
+      expect(updatedContent, contains('\n        <activity'));
+      expect(updatedContent, contains('\n    <uses-permission'));
+
+      // Verify structure is preserved
+      expect(updatedContent, contains('<uses-permission'));
+      expect(
+        updatedContent,
+        contains(r'android:name="${applicationName}"'),
+      );
+    });
+
+    test('preserves AndroidManifest.xml indentation with tabs', () async {
+      // Create Android directory structure
+      final manifestDir = Directory(
+        '${tempDir.path}/android/app/src/main',
+      );
+      await manifestDir.create(recursive: true);
+
+      final manifestFile = File('${manifestDir.path}/AndroidManifest.xml');
+      const originalContent = r'''
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+	package="com.example.old">
+	<application
+		android:label="Old App"
+		android:name="${applicationName}">
+		<activity android:name=".MainActivity"/>
+	</application>
+</manifest>''';
+      await manifestFile.writeAsString(originalContent);
+
+      const config = FlavorConfig(
+        name: 'staging',
+        bundleId: 'com.example.staging',
+        appName: 'App Staging',
+      );
+
+      await processor.process(tempDir.path, config);
+
+      final updatedContent = await manifestFile.readAsString();
+
+      // Verify package and label were updated
+      expect(updatedContent, contains('package="com.example.staging"'));
+      expect(updatedContent, contains('android:label="App Staging"'));
+
+      // Verify tab indentation is preserved
+      expect(updatedContent, contains('\n\t<application'));
+      expect(updatedContent, contains('\n\t\t<activity'));
+    });
+
+    test('adds metadata with correct indentation detection', () async {
+      // Create Android directory structure
+      final manifestDir = Directory(
+        '${tempDir.path}/android/app/src/main',
+      );
+      await manifestDir.create(recursive: true);
+
+      final manifestFile = File('${manifestDir.path}/AndroidManifest.xml');
+      const originalContent = '''
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.example.app">
+    <application
+        android:label="My App">
+        <activity android:name=".MainActivity"/>
+    </application>
+</manifest>''';
+      await manifestFile.writeAsString(originalContent);
+
+      const config = FlavorConfig(
+        name: 'dev',
+        bundleId: 'com.example.dev',
+        appName: 'App Dev',
+        metadata: {
+          'com.google.android.geo.API_KEY': 'test_api_key',
+          'firebase.messaging.default_notification_icon':
+              '@drawable/ic_notification',
+        },
+      );
+
+      await processor.process(tempDir.path, config);
+
+      final updatedContent = await manifestFile.readAsString();
+
+      // Verify metadata was added
+      expect(
+        updatedContent,
+        contains('android:name="com.google.android.geo.API_KEY"'),
+      );
+      expect(updatedContent, contains('android:value="test_api_key"'));
+      expect(
+        updatedContent,
+        contains('android:name="firebase.messaging.default_notification_icon"'),
+      );
+      expect(
+        updatedContent,
+        contains('android:value="@drawable/ic_notification"'),
+      );
+
+      // Verify indentation is correct (should match activity's indentation)
+      expect(updatedContent, contains('\n        <meta-data'));
+    });
+
+    test('updates existing metadata while preserving structure', () async {
+      // Create Android directory structure
+      final manifestDir = Directory(
+        '${tempDir.path}/android/app/src/main',
+      );
+      await manifestDir.create(recursive: true);
+
+      final manifestFile = File('${manifestDir.path}/AndroidManifest.xml');
+      const originalContent = '''
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.example.app">
+    <application
+        android:label="My App">
+        <activity android:name=".MainActivity"/>
+        <meta-data android:name="test.key" android:value="old_value" />
+    </application>
+</manifest>''';
+      await manifestFile.writeAsString(originalContent);
+
+      const config = FlavorConfig(
+        name: 'dev',
+        bundleId: 'com.example.dev',
+        appName: 'App Dev',
+        metadata: {
+          'test.key': 'new_value',
+        },
+      );
+
+      await processor.process(tempDir.path, config);
+
+      final updatedContent = await manifestFile.readAsString();
+
+      // Verify metadata was updated
+      expect(updatedContent, contains('android:value="new_value"'));
+      expect(updatedContent, isNot(contains('android:value="old_value"')));
+
+      // Verify only one instance of the metadata exists
+      expect(
+        'android:name="test.key"'.allMatches(updatedContent).length,
+        equals(1),
+      );
+    });
+
+    test('preserves mixed whitespace in AndroidManifest.xml', () async {
+      // Create Android directory structure
+      final manifestDir = Directory(
+        '${tempDir.path}/android/app/src/main',
+      );
+      await manifestDir.create(recursive: true);
+
+      final manifestFile = File('${manifestDir.path}/AndroidManifest.xml');
+      // Mixed spacing around attributes
+      const originalContent = '''
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+          package  =  "com.example.old"  >
+    <application
+        android:label   =   "Old App"
+        android:icon="@mipmap/ic_launcher">
+    </application>
+</manifest>''';
+      await manifestFile.writeAsString(originalContent);
+
+      const config = FlavorConfig(
+        name: 'dev',
+        bundleId: 'com.example.dev',
+        appName: 'App Dev',
+      );
+
+      await processor.process(tempDir.path, config);
+
+      final updatedContent = await manifestFile.readAsString();
+
+      // Verify values were updated
+      expect(updatedContent, contains('com.example.dev'));
+      expect(updatedContent, contains('App Dev'));
+
+      // Verify other attributes and structure remain
+      expect(updatedContent, contains('android:icon="@mipmap/ic_launcher"'));
+    });
   });
 }
