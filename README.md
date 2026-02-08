@@ -1,7 +1,10 @@
 # Flutter Flavor Orchestrator 🎨
 
+☕ **[Buy me a coffee on Ko-fi](https://ko-fi.com/lamp76)** - If this package helps you, consider supporting my work!
+
 [![pub package](https://img.shields.io/pub/v/flutter_flavor_orchestrator.svg)](https://pub.dev/packages/flutter_flavor_orchestrator)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Ko-fi](https://img.shields.io/badge/Ko--fi-Support%20Me-FF5E5B?logo=ko-fi&logoColor=white)](https://ko-fi.com/lamp76) 
 
 A powerful, enterprise-grade build-time orchestrator for managing Flutter flavors, native configurations, and provisioning files across Android and iOS platforms.
 
