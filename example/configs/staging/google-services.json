@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "987654321000",
+    "project_id": "flavorapp-staging",
+    "storage_bucket": "flavorapp-staging.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:987654321000:android:fedcba0987654321",
+        "android_client_info": {
+          "package_name": "com.example.flavorapp.staging"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "987654321000-zyxwvutsrqponmlk.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSySTAGING_API_KEY_0987654321"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "987654321000-zyxwvutsrqponmlk.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
