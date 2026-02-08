@@ -8,7 +8,7 @@ import '../utils/logger.dart';
 /// Processor for Android platform-specific configurations.
 ///
 /// Handles manipulation of Android native files including AndroidManifest.xml,
-/// build.gradle, and provisioning files like google-services.json.
+/// build.gradle/build.gradle.kts, and provisioning files like google-services.json.
 final class AndroidProcessor {
   /// Creates a new [AndroidProcessor] instance.
   ///
@@ -149,30 +149,49 @@ final class AndroidProcessor {
     }
   }
 
-  /// Processes build.gradle file to add flavor configuration.
+  /// Processes build.gradle or build.gradle.kts file to add flavor
+  /// configuration.
   Future<void> _processBuildGradle(
     String androidPath,
     FlavorConfig config,
   ) async {
     logger.info('Processing build.gradle...');
 
+    // Check for both .gradle and .gradle.kts files
     final buildGradlePath = path.join(androidPath, 'app', 'build.gradle');
+    final buildGradleKtsPath =
+        path.join(androidPath, 'app', 'build.gradle.kts');
 
-    if (!await fileManager.fileExists(buildGradlePath)) {
-      logger.warning('build.gradle not found at: $buildGradlePath');
+    String? gradleFilePath;
+    var isKotlinScript = false;
+
+    if (await fileManager.fileExists(buildGradleKtsPath)) {
+      gradleFilePath = buildGradleKtsPath;
+      isKotlinScript = true;
+      logger.debug('Found build.gradle.kts (Kotlin script)');
+    } else if (await fileManager.fileExists(buildGradlePath)) {
+      gradleFilePath = buildGradlePath;
+      logger.debug('Found build.gradle (Groovy script)');
+    } else {
+      logger.warning('Neither build.gradle nor build.gradle.kts found');
       return;
     }
 
-    var gradleContent = await fileManager.readFile(buildGradlePath);
+    var gradleContent = await fileManager.readFile(gradleFilePath);
 
     // Update applicationId in defaultConfig
-    gradleContent = _updateApplicationId(gradleContent, config.bundleId);
+    gradleContent = _updateApplicationId(
+      gradleContent,
+      config.bundleId,
+      isKotlinScript,
+    );
 
     // Update SDK versions if configured
     if (config.androidMinSdkVersion != null) {
       gradleContent = _updateMinSdkVersion(
         gradleContent,
         config.androidMinSdkVersion!,
+        isKotlinScript,
       );
     }
 
@@ -180,6 +199,7 @@ final class AndroidProcessor {
       gradleContent = _updateTargetSdkVersion(
         gradleContent,
         config.androidTargetSdkVersion!,
+        isKotlinScript,
       );
     }
 
@@ -187,6 +207,7 @@ final class AndroidProcessor {
       gradleContent = _updateCompileSdkVersion(
         gradleContent,
         config.androidCompileSdkVersion!,
+        isKotlinScript,
       );
     }
 
@@ -199,74 +220,160 @@ final class AndroidProcessor {
       );
     }
 
-    await fileManager.writeFile(buildGradlePath, gradleContent);
-    logger.success('build.gradle updated');
+    await fileManager.writeFile(gradleFilePath, gradleContent);
+    logger.success(
+      '${isKotlinScript ? 'build.gradle.kts' : 'build.gradle'} updated',
+    );
   }
 
-  /// Updates the applicationId in build.gradle.
-  String _updateApplicationId(String content, String bundleId) {
+  /// Updates the applicationId in build.gradle or build.gradle.kts.
+  String _updateApplicationId(
+    String content,
+    String bundleId,
+    bool isKotlinScript,
+  ) {
     logger.debug('Updating applicationId to: $bundleId');
 
-    final regex = RegExp(r'applicationId\s+"[^"]*"');
+    // Regex patterns for both Groovy ("value") and Kotlin
+    // ("value" or = "value")
+    final groovyRegex = RegExp(r'applicationId\s+"[^"]*"');
+    final kotlinRegex = RegExp(r'applicationId\s*=?\s*"[^"]*"');
+
+    final regex = isKotlinScript ? kotlinRegex : groovyRegex;
+    final replacement = isKotlinScript
+        ? 'applicationId = "$bundleId"'
+        : 'applicationId "$bundleId"';
+
     if (regex.hasMatch(content)) {
-      return content.replaceFirst(regex, 'applicationId "$bundleId"');
+      return content.replaceFirst(regex, replacement);
     }
 
     // If applicationId not found, try to add it to defaultConfig
     final defaultConfigRegex = RegExp(r'defaultConfig\s*\{');
     if (defaultConfigRegex.hasMatch(content)) {
+      final indent = isKotlinScript ? '        ' : '        ';
       return content.replaceFirst(
         defaultConfigRegex,
-        'defaultConfig {\n        applicationId "$bundleId"',
+        'defaultConfig {\n$indent$replacement',
       );
     }
 
-    logger.warning('Could not update applicationId in build.gradle');
+    logger.warning('Could not update applicationId in build gradle file');
     return content;
   }
 
-  /// Updates the minSdkVersion in build.gradle.
-  String _updateMinSdkVersion(String content, int version) {
+  /// Updates the minSdkVersion in build.gradle or build.gradle.kts.
+  String _updateMinSdkVersion(
+    String content,
+    int version,
+    bool isKotlinScript,
+  ) {
     logger.debug('Updating minSdkVersion to: $version');
 
-    final regex = RegExp(r'minSdkVersion\s+\d+');
-    if (regex.hasMatch(content)) {
-      return content.replaceFirst(regex, 'minSdkVersion $version');
+    // Groovy: minSdkVersion 21, Kotlin: minSdk = 21 or minSdkVersion(21)
+    final groovyRegex = RegExp(r'minSdkVersion\s+\d+');
+    final kotlinAssignRegex = RegExp(r'minSdk\s*=\s*\d+');
+    final kotlinFunctionRegex = RegExp(r'minSdkVersion\s*\(\s*\d+\s*\)');
+
+    if (isKotlinScript) {
+      // Try Kotlin assignment syntax first
+      if (kotlinAssignRegex.hasMatch(content)) {
+        return content.replaceFirst(kotlinAssignRegex, 'minSdk = $version');
+      }
+      // Try Kotlin function syntax
+      if (kotlinFunctionRegex.hasMatch(content)) {
+        return content.replaceFirst(
+          kotlinFunctionRegex,
+          'minSdkVersion($version)',
+        );
+      }
+    } else {
+      // Groovy syntax
+      if (groovyRegex.hasMatch(content)) {
+        return content.replaceFirst(groovyRegex, 'minSdkVersion $version');
+      }
     }
 
-    logger.warning('Could not update minSdkVersion in build.gradle');
+    logger.warning('Could not update minSdkVersion in build gradle file');
     return content;
   }
 
-  /// Updates the targetSdkVersion in build.gradle.
-  String _updateTargetSdkVersion(String content, int version) {
+  /// Updates the targetSdkVersion in build.gradle or build.gradle.kts.
+  String _updateTargetSdkVersion(
+    String content,
+    int version,
+    bool isKotlinScript,
+  ) {
     logger.debug('Updating targetSdkVersion to: $version');
 
-    final regex = RegExp(r'targetSdkVersion\s+\d+');
-    if (regex.hasMatch(content)) {
-      return content.replaceFirst(regex, 'targetSdkVersion $version');
+    // Groovy: targetSdkVersion 33, Kotlin: targetSdk = 33 or
+    // targetSdkVersion(33)
+    final groovyRegex = RegExp(r'targetSdkVersion\s+\d+');
+    final kotlinAssignRegex = RegExp(r'targetSdk\s*=\s*\d+');
+    final kotlinFunctionRegex = RegExp(r'targetSdkVersion\s*\(\s*\d+\s*\)');
+
+    if (isKotlinScript) {
+      // Try Kotlin assignment syntax first
+      if (kotlinAssignRegex.hasMatch(content)) {
+        return content.replaceFirst(kotlinAssignRegex, 'targetSdk = $version');
+      }
+      // Try Kotlin function syntax
+      if (kotlinFunctionRegex.hasMatch(content)) {
+        return content.replaceFirst(
+          kotlinFunctionRegex,
+          'targetSdkVersion($version)',
+        );
+      }
+    } else {
+      // Groovy syntax
+      if (groovyRegex.hasMatch(content)) {
+        return content.replaceFirst(groovyRegex, 'targetSdkVersion $version');
+      }
     }
 
-    logger.warning('Could not update targetSdkVersion in build.gradle');
+    logger.warning('Could not update targetSdkVersion in build gradle file');
     return content;
   }
 
-  /// Updates the compileSdkVersion in build.gradle.
-  String _updateCompileSdkVersion(String content, int version) {
+  /// Updates the compileSdkVersion in build.gradle or build.gradle.kts.
+  String _updateCompileSdkVersion(
+    String content,
+    int version,
+    bool isKotlinScript,
+  ) {
     logger.debug('Updating compileSdkVersion to: $version');
 
-    final regex = RegExp(r'compileSdkVersion\s+\d+');
-    if (regex.hasMatch(content)) {
-      return content.replaceFirst(regex, 'compileSdkVersion $version');
+    // Groovy: compileSdkVersion 33 or compileSdk 33
+    // Kotlin: compileSdk = 33 or compileSdkVersion(33)
+    final groovyRegex = RegExp(r'compileSdkVersion\s+\d+');
+    final groovyAltRegex = RegExp(r'compileSdk\s+\d+');
+    final kotlinAssignRegex = RegExp(r'compileSdk\s*=\s*\d+');
+    final kotlinFunctionRegex = RegExp(r'compileSdkVersion\s*\(\s*\d+\s*\)');
+
+    if (isKotlinScript) {
+      // Try Kotlin assignment syntax first
+      if (kotlinAssignRegex.hasMatch(content)) {
+        return content.replaceFirst(kotlinAssignRegex, 'compileSdk = $version');
+      }
+      // Try Kotlin function syntax
+      if (kotlinFunctionRegex.hasMatch(content)) {
+        return content.replaceFirst(
+          kotlinFunctionRegex,
+          'compileSdkVersion($version)',
+        );
+      }
+    } else {
+      // Groovy syntax
+      if (groovyRegex.hasMatch(content)) {
+        return content.replaceFirst(groovyRegex, 'compileSdkVersion $version');
+      }
+      // Alternative Groovy format
+      if (groovyAltRegex.hasMatch(content)) {
+        return content.replaceFirst(groovyAltRegex, 'compileSdk $version');
+      }
     }
 
-    // Try alternative format: compileSdk
-    final altRegex = RegExp(r'compileSdk\s+\d+');
-    if (altRegex.hasMatch(content)) {
-      return content.replaceFirst(altRegex, 'compileSdk $version');
-    }
-
-    logger.warning('Could not update compileSdkVersion in build.gradle');
+    logger.warning('Could not update compileSdkVersion in build gradle file');
     return content;
   }
 

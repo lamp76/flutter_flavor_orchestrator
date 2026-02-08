@@ -12,7 +12,7 @@ A powerful, enterprise-grade build-time orchestrator for managing Flutter flavor
 
 - 🎯 **Multiple Flavor Management** - Easily configure dev, staging, production, and custom flavors
 - 📱 **Cross-Platform Support** - Automatically updates Android and iOS native files
-- 🔧 **Native File Manipulation** - Intelligent modification of AndroidManifest.xml, build.gradle, Info.plist, and more
+- 🔧 **Native File Manipulation** - Intelligent modification of AndroidManifest.xml, build.gradle/build.gradle.kts, Info.plist, and more
 - 🔥 **Firebase Integration** - Automatic provisioning file management (google-services.json, GoogleService-Info.plist)
 - 🏗️ **Clean Architecture** - Enterprise-level code quality with separation of concerns
 - 🛡️ **Safe Operations** - Automatic backup and rollback on errors
@@ -207,10 +207,11 @@ When you apply a flavor, the following Android files are automatically updated:
 - ✏️ Application label (`android:label`)
 - ✏️ Metadata entries (`<meta-data>` tags)
 
-#### `android/app/build.gradle`
+#### `android/app/build.gradle` or `android/app/build.gradle.kts`
 - ✏️ Application ID (`applicationId`)
 - ✏️ SDK versions (`minSdkVersion`, `targetSdkVersion`, `compileSdkVersion`)
 - ✏️ Custom Gradle configuration
+- 🔄 Supports both Groovy (`.gradle`) and Kotlin (`.gradle.kts`) build scripts
 
 #### `android/app/google-services.json`
 - 📋 Copied from configured path

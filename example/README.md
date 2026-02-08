@@ -106,7 +106,7 @@ When you apply a flavor, the orchestrator automatically updates:
 
 ### Android
 - `android/app/src/main/AndroidManifest.xml` - package name, app label, metadata
-- `android/app/build.gradle` - applicationId, SDK versions, custom config
+- `android/app/build.gradle` or `build.gradle.kts` - applicationId, SDK versions, custom config (supports both Groovy and Kotlin scripts)
 - `android/app/google-services.json` - Firebase configuration
 
 ### iOS

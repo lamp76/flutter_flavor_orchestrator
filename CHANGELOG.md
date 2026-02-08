@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.3] - 2026-02-08
+
+### Added
+- Support for both Groovy (`build.gradle`) and Kotlin (`build.gradle.kts`) build scripts in Android processor
+- Automatic detection of build script type with preference for `.kts` files when both exist
+- Comprehensive test coverage for both Groovy and Kotlin build script formats
+
+### Changed
+- Enhanced Android processor to handle multiple build script syntaxes
+- Updated documentation to reflect support for both build script types
+
+### Fixed
+- Fixed all flutter analyze issues for code quality compliance
+
 ## [0.1.2] - 2026-02-08
 
 ### Fixed
