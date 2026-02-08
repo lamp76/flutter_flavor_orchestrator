@@ -62,8 +62,10 @@ void main() {
       expect(config.bundleId, equals('com.example.staging'));
       expect(config.appName, equals('App Staging'));
       expect(config.iconPath, equals('assets/icons/staging'));
-      expect(config.metadata['API_URL'],
-          equals('https://staging-api.example.com'));
+      expect(
+        config.metadata['API_URL'],
+        equals('https://staging-api.example.com'),
+      );
       expect(config.androidMinSdkVersion, equals(21));
       expect(config.iosMinVersion, equals('13.0'));
     });
@@ -81,7 +83,9 @@ void main() {
       expect(yaml['bundle_id'], equals('com.example.dev'));
       expect(yaml['app_name'], equals('App Dev'));
       expect(
-          yaml['metadata'], equals({'API_URL': 'https://dev-api.example.com'}));
+        yaml['metadata'],
+        equals({'API_URL': 'https://dev-api.example.com'}),
+      );
     });
 
     test('equality works correctly', () {
