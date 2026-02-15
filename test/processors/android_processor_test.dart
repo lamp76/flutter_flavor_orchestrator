@@ -546,5 +546,281 @@ android {
       // Verify other attributes and structure remain
       expect(updatedContent, contains('android:icon="@mipmap/ic_launcher"'));
     });
+
+    test('updates SDK versions with flutter variable references in Kotlin',
+        () async {
+      final buildGradleDir = Directory('${tempDir.path}/android/app');
+      await buildGradleDir.create(recursive: true);
+
+      final buildGradleKtsFile =
+          File('${buildGradleDir.path}/build.gradle.kts');
+      await buildGradleKtsFile.writeAsString('''
+android {
+    compileSdk = flutter.compileSdkVersion
+    
+    defaultConfig {
+        applicationId = "com.example.app"
+        minSdk = flutter.minSdkVersion
+        targetSdk = flutter.targetSdkVersion
+    }
+}
+''');
+
+      // Create minimal AndroidManifest.xml
+      final manifestDir = Directory(
+        '${tempDir.path}/android/app/src/main',
+      );
+      await manifestDir.create(recursive: true);
+      final manifestFile = File('${manifestDir.path}/AndroidManifest.xml');
+      await manifestFile.writeAsString('''
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.example.app">
+    <application android:label="App"></application>
+</manifest>
+''');
+
+      const config = FlavorConfig(
+        name: 'production',
+        bundleId: 'com.example.prod',
+        appName: 'App Prod',
+        androidMinSdkVersion: 24,
+        androidTargetSdkVersion: 34,
+        androidCompileSdkVersion: 34,
+      );
+
+      await processor.process(tempDir.path, config);
+
+      final updatedContent = await buildGradleKtsFile.readAsString();
+
+      expect(updatedContent, contains('minSdk = 24'));
+      expect(updatedContent, contains('targetSdk = 34'));
+      expect(updatedContent, contains('compileSdk = 34'));
+      expect(updatedContent, isNot(contains('flutter.minSdkVersion')));
+      expect(updatedContent, isNot(contains('flutter.targetSdkVersion')));
+      expect(updatedContent, isNot(contains('flutter.compileSdkVersion')));
+    });
+
+    test('inserts SDK versions when missing in build.gradle.kts', () async {
+      final buildGradleDir = Directory('${tempDir.path}/android/app');
+      await buildGradleDir.create(recursive: true);
+
+      final buildGradleKtsFile =
+          File('${buildGradleDir.path}/build.gradle.kts');
+      await buildGradleKtsFile.writeAsString('''
+android {
+    namespace = "com.example.app"
+    
+    defaultConfig {
+        applicationId = "com.example.app"
+        versionCode = 1
+        versionName = "1.0"
+    }
+}
+''');
+
+      // Create minimal AndroidManifest.xml
+      final manifestDir = Directory(
+        '${tempDir.path}/android/app/src/main',
+      );
+      await manifestDir.create(recursive: true);
+      final manifestFile = File('${manifestDir.path}/AndroidManifest.xml');
+      await manifestFile.writeAsString('''
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.example.app">
+    <application android:label="App"></application>
+</manifest>
+''');
+
+      const config = FlavorConfig(
+        name: 'dev',
+        bundleId: 'com.example.dev',
+        appName: 'App Dev',
+        androidMinSdkVersion: 23,
+        androidTargetSdkVersion: 34,
+        androidCompileSdkVersion: 34,
+      );
+
+      await processor.process(tempDir.path, config);
+
+      final updatedContent = await buildGradleKtsFile.readAsString();
+
+      expect(updatedContent, contains('minSdk = 23'));
+      expect(updatedContent, contains('targetSdk = 34'));
+      expect(updatedContent, contains('compileSdk = 34'));
+    });
+
+    test('inserts SDK versions when missing in build.gradle (Groovy)',
+        () async {
+      final buildGradleDir = Directory('${tempDir.path}/android/app');
+      await buildGradleDir.create(recursive: true);
+
+      final buildGradleFile = File('${buildGradleDir.path}/build.gradle');
+      await buildGradleFile.writeAsString('''
+android {
+    namespace "com.example.app"
+    
+    defaultConfig {
+        applicationId "com.example.app"
+        versionCode 1
+        versionName "1.0"
+    }
+}
+''');
+
+      // Create minimal AndroidManifest.xml
+      final manifestDir = Directory(
+        '${tempDir.path}/android/app/src/main',
+      );
+      await manifestDir.create(recursive: true);
+      final manifestFile = File('${manifestDir.path}/AndroidManifest.xml');
+      await manifestFile.writeAsString('''
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.example.app">
+    <application android:label="App"></application>
+</manifest>
+''');
+
+      const config = FlavorConfig(
+        name: 'staging',
+        bundleId: 'com.example.staging',
+        appName: 'App Staging',
+        androidMinSdkVersion: 22,
+        androidTargetSdkVersion: 33,
+        androidCompileSdkVersion: 33,
+      );
+
+      await processor.process(tempDir.path, config);
+
+      final updatedContent = await buildGradleFile.readAsString();
+
+      expect(updatedContent, contains('minSdkVersion 22'));
+      expect(updatedContent, contains('targetSdkVersion 33'));
+      expect(updatedContent, contains('compileSdkVersion 33'));
+    });
+
+    test(
+        'updates SDK versions with compileSdk shorthand in build.gradle '
+        '(Groovy)', () async {
+      final buildGradleDir = Directory('${tempDir.path}/android/app');
+      await buildGradleDir.create(recursive: true);
+
+      final buildGradleFile = File('${buildGradleDir.path}/build.gradle');
+      await buildGradleFile.writeAsString('''
+android {
+    compileSdk 30
+    
+    defaultConfig {
+        applicationId "com.example.app"
+        minSdkVersion 21
+        targetSdkVersion 30
+    }
+}
+''');
+
+      // Create minimal AndroidManifest.xml
+      final manifestDir = Directory(
+        '${tempDir.path}/android/app/src/main',
+      );
+      await manifestDir.create(recursive: true);
+      final manifestFile = File('${manifestDir.path}/AndroidManifest.xml');
+      await manifestFile.writeAsString('''
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.example.app">
+    <application android:label="App"></application>
+</manifest>
+''');
+
+      const config = FlavorConfig(
+        name: 'dev',
+        bundleId: 'com.example.dev',
+        appName: 'App Dev',
+        androidMinSdkVersion: 24,
+        androidTargetSdkVersion: 34,
+        androidCompileSdkVersion: 34,
+      );
+
+      await processor.process(tempDir.path, config);
+
+      final updatedContent = await buildGradleFile.readAsString();
+
+      expect(updatedContent, contains('minSdkVersion 24'));
+      expect(updatedContent, contains('targetSdkVersion 34'));
+      expect(updatedContent, contains('compileSdk 34'));
+    });
+
+    test('validates build.gradle.kts structure after modifications', () async {
+      final buildGradleDir = Directory('${tempDir.path}/android/app');
+      await buildGradleDir.create(recursive: true);
+
+      final buildGradleKtsFile =
+          File('${buildGradleDir.path}/build.gradle.kts');
+      await buildGradleKtsFile.writeAsString('''
+plugins {
+    id("com.android.application")
+}
+
+android {
+    namespace = "com.example.app"
+    compileSdk = flutter.compileSdkVersion
+    
+    defaultConfig {
+        applicationId = "com.example.app"
+        minSdk = flutter.minSdkVersion
+        targetSdk = flutter.targetSdkVersion
+        versionCode = 1
+        versionName = "1.0"
+    }
+}
+''');
+
+      // Create minimal AndroidManifest.xml
+      final manifestDir = Directory(
+        '${tempDir.path}/android/app/src/main',
+      );
+      await manifestDir.create(recursive: true);
+      final manifestFile = File('${manifestDir.path}/AndroidManifest.xml');
+      await manifestFile.writeAsString('''
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.example.app">
+    <application android:label="App"></application>
+</manifest>
+''');
+
+      const config = FlavorConfig(
+        name: 'production',
+        bundleId: 'com.example.prod',
+        appName: 'App Prod',
+        androidMinSdkVersion: 23,
+        androidTargetSdkVersion: 34,
+        androidCompileSdkVersion: 34,
+      );
+
+      await processor.process(tempDir.path, config);
+
+      final updatedContent = await buildGradleKtsFile.readAsString();
+
+      // Verify SDK versions were updated
+      expect(updatedContent, contains('minSdk = 23'));
+      expect(updatedContent, contains('targetSdk = 34'));
+      expect(updatedContent, contains('compileSdk = 34'));
+
+      // Verify applicationId was updated
+      expect(updatedContent, contains('applicationId = "com.example.prod"'));
+
+      // Verify structure is maintained
+      expect(updatedContent, contains('namespace = "com.example.app"'));
+      expect(updatedContent, contains('versionCode = 1'));
+      expect(updatedContent, contains('versionName = "1.0"'));
+
+      // Ensure no duplicate entries
+      expect('minSdk'.allMatches(updatedContent).length, equals(1));
+      expect('targetSdk'.allMatches(updatedContent).length, equals(1));
+      expect('compileSdk'.allMatches(updatedContent).length, equals(1));
+    });
   });
 }

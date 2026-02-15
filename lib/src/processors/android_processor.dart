@@ -380,9 +380,10 @@ final class AndroidProcessor {
     logger.debug('Updating minSdkVersion to: $version');
 
     // Groovy: minSdkVersion 21, Kotlin: minSdk = 21 or minSdkVersion(21)
-    final groovyRegex = RegExp(r'minSdkVersion\s+\d+');
-    final kotlinAssignRegex = RegExp(r'minSdk\s*=\s*\d+');
-    final kotlinFunctionRegex = RegExp(r'minSdkVersion\s*\(\s*\d+\s*\)');
+    // Also handles flutter.minSdkVersion or other variable references
+    final groovyRegex = RegExp(r'minSdkVersion\s+[\w.]+');
+    final kotlinAssignRegex = RegExp(r'minSdk\s*=\s*[\w.]+');
+    final kotlinFunctionRegex = RegExp(r'minSdkVersion\s*\([^)]+\)');
 
     if (isKotlinScript) {
       // Try Kotlin assignment syntax first
@@ -396,10 +397,28 @@ final class AndroidProcessor {
           'minSdkVersion($version)',
         );
       }
+      // If not found, try to add it to defaultConfig
+      final defaultConfigRegex = RegExp(r'defaultConfig\s*\{');
+      if (defaultConfigRegex.hasMatch(content)) {
+        logger.debug('Adding minSdk to defaultConfig');
+        return content.replaceFirst(
+          defaultConfigRegex,
+          'defaultConfig {\n        minSdk = $version',
+        );
+      }
     } else {
       // Groovy syntax
       if (groovyRegex.hasMatch(content)) {
         return content.replaceFirst(groovyRegex, 'minSdkVersion $version');
+      }
+      // If not found, try to add it to defaultConfig
+      final defaultConfigRegex = RegExp(r'defaultConfig\s*\{');
+      if (defaultConfigRegex.hasMatch(content)) {
+        logger.debug('Adding minSdkVersion to defaultConfig');
+        return content.replaceFirst(
+          defaultConfigRegex,
+          'defaultConfig {\n        minSdkVersion $version',
+        );
       }
     }
 
@@ -417,9 +436,10 @@ final class AndroidProcessor {
 
     // Groovy: targetSdkVersion 33, Kotlin: targetSdk = 33 or
     // targetSdkVersion(33)
-    final groovyRegex = RegExp(r'targetSdkVersion\s+\d+');
-    final kotlinAssignRegex = RegExp(r'targetSdk\s*=\s*\d+');
-    final kotlinFunctionRegex = RegExp(r'targetSdkVersion\s*\(\s*\d+\s*\)');
+    // Also handles flutter.targetSdkVersion or other variable references
+    final groovyRegex = RegExp(r'targetSdkVersion\s+[\w.]+');
+    final kotlinAssignRegex = RegExp(r'targetSdk\s*=\s*[\w.]+');
+    final kotlinFunctionRegex = RegExp(r'targetSdkVersion\s*\([^)]+\)');
 
     if (isKotlinScript) {
       // Try Kotlin assignment syntax first
@@ -433,10 +453,28 @@ final class AndroidProcessor {
           'targetSdkVersion($version)',
         );
       }
+      // If not found, try to add it to defaultConfig
+      final defaultConfigRegex = RegExp(r'defaultConfig\s*\{');
+      if (defaultConfigRegex.hasMatch(content)) {
+        logger.debug('Adding targetSdk to defaultConfig');
+        return content.replaceFirst(
+          defaultConfigRegex,
+          'defaultConfig {\n        targetSdk = $version',
+        );
+      }
     } else {
       // Groovy syntax
       if (groovyRegex.hasMatch(content)) {
         return content.replaceFirst(groovyRegex, 'targetSdkVersion $version');
+      }
+      // If not found, try to add it to defaultConfig
+      final defaultConfigRegex = RegExp(r'defaultConfig\s*\{');
+      if (defaultConfigRegex.hasMatch(content)) {
+        logger.debug('Adding targetSdkVersion to defaultConfig');
+        return content.replaceFirst(
+          defaultConfigRegex,
+          'defaultConfig {\n        targetSdkVersion $version',
+        );
       }
     }
 
@@ -454,10 +492,11 @@ final class AndroidProcessor {
 
     // Groovy: compileSdkVersion 33 or compileSdk 33
     // Kotlin: compileSdk = 33 or compileSdkVersion(33)
-    final groovyRegex = RegExp(r'compileSdkVersion\s+\d+');
-    final groovyAltRegex = RegExp(r'compileSdk\s+\d+');
-    final kotlinAssignRegex = RegExp(r'compileSdk\s*=\s*\d+');
-    final kotlinFunctionRegex = RegExp(r'compileSdkVersion\s*\(\s*\d+\s*\)');
+    // Also handles flutter.compileSdkVersion or other variable references
+    final groovyRegex = RegExp(r'compileSdkVersion\s+[\w.]+');
+    final groovyAltRegex = RegExp(r'compileSdk\s+[\w.]+');
+    final kotlinAssignRegex = RegExp(r'compileSdk\s*=\s*[\w.]+');
+    final kotlinFunctionRegex = RegExp(r'compileSdkVersion\s*\([^)]+\)');
 
     if (isKotlinScript) {
       // Try Kotlin assignment syntax first
@@ -471,6 +510,15 @@ final class AndroidProcessor {
           'compileSdkVersion($version)',
         );
       }
+      // If not found, try to add it to android block
+      final androidBlockRegex = RegExp(r'android\s*\{');
+      if (androidBlockRegex.hasMatch(content)) {
+        logger.debug('Adding compileSdk to android block');
+        return content.replaceFirst(
+          androidBlockRegex,
+          'android {\n    compileSdk = $version',
+        );
+      }
     } else {
       // Groovy syntax
       if (groovyRegex.hasMatch(content)) {
@@ -479,6 +527,15 @@ final class AndroidProcessor {
       // Alternative Groovy format
       if (groovyAltRegex.hasMatch(content)) {
         return content.replaceFirst(groovyAltRegex, 'compileSdk $version');
+      }
+      // If not found, try to add it to android block
+      final androidBlockRegex = RegExp(r'android\s*\{');
+      if (androidBlockRegex.hasMatch(content)) {
+        logger.debug('Adding compileSdkVersion to android block');
+        return content.replaceFirst(
+          androidBlockRegex,
+          'android {\n    compileSdkVersion $version',
+        );
       }
     }
 
@@ -492,21 +549,43 @@ final class AndroidProcessor {
     Map<String, String> customConfig,
   ) {
     logger.debug('Adding custom Gradle configuration...');
+    logger.warning(
+      'Custom Gradle configuration is provided as raw code snippets. '
+      'Ensure the syntax matches your build file type (Groovy vs Kotlin DSL).',
+    );
 
     var updatedContent = content;
 
     for (final entry in customConfig.entries) {
       final section = entry.key;
-      final config = entry.value;
+      var config = entry.value.trim();
 
       logger.debug('Adding config to section: $section');
 
-      // Find the section and add configuration
+      // Ensure proper indentation by preserving existing indentation
       final sectionRegex = RegExp('$section\\s*\\{');
-      if (sectionRegex.hasMatch(updatedContent)) {
+      final match = sectionRegex.firstMatch(updatedContent);
+
+      if (match != null) {
+        // Detect the indentation level after the opening brace
+        final startPos = match.end;
+        final afterBrace = updatedContent.substring(startPos);
+        final nextLineMatch = RegExp(r'\\n([ \\t]+)').firstMatch(afterBrace);
+
+        String indent = '        '; // Default 8 spaces
+        if (nextLineMatch != null && nextLineMatch.group(1)!.isNotEmpty) {
+          indent = nextLineMatch.group(1)!;
+        }
+
+        // Add proper indentation to each line of the config
+        final indentedConfig = config
+            .split('\\n')
+            .map((line) => line.trim().isEmpty ? '' : '$indent$line')
+            .join('\\n');
+
         updatedContent = updatedContent.replaceFirst(
           sectionRegex,
-          '$section {\n        $config',
+          '$section {\\n$indentedConfig\\n',
         );
       } else {
         logger.warning('Section "$section" not found in build.gradle');

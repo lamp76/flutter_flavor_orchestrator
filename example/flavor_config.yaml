@@ -37,11 +37,12 @@ dev:
       android/app/src/main/res/values/dev_config.xml: configs/dev/android_config.xml
   
   # Custom Gradle configuration (Android)
-  custom_gradle_config:
-    defaultConfig: |
-      // Custom dev configuration
-      buildConfigField "String", "API_URL", "\"https://dev-api.example.com\""
-      buildConfigField "boolean", "ENABLE_LOGGING", "true"
+  # NOTE: For build.gradle.kts (Kotlin DSL), use Kotlin syntax with parentheses
+  # See example/CUSTOM_GRADLE_CONFIG.md for details
+  # custom_gradle_config:
+  #   defaultConfig: |
+  #     buildConfigField("String", "API_URL", "\"https://dev-api.example.com\"")
+  #     buildConfigField("Boolean", "ENABLE_LOGGING", "true")
   
   # Custom Info.plist entries (iOS)
   custom_info_plist_entries:
@@ -76,10 +77,10 @@ staging:
     android_google_services: configs/staging/google-services.json
     ios_google_service: configs/staging/GoogleService-Info.plist
   
-  custom_gradle_config:
-    defaultConfig: |
-      buildConfigField "String", "API_URL", "\"https://staging-api.example.com\""
-      buildConfigField "boolean", "ENABLE_LOGGING", "true"
+  # custom_gradle_config:
+  #   defaultConfig: |
+  #     buildConfigField("String", "API_URL", "\"https://staging-api.example.com\"")
+  #     buildConfigField("Boolean", "ENABLE_LOGGING", "true")
   
   custom_info_plist_entries:
     API_URL: https://staging-api.example.com
@@ -111,16 +112,16 @@ production:
     android_google_services: configs/production/google-services.json
     ios_google_service: configs/production/GoogleService-Info.plist
   
-  custom_gradle_config:
-    defaultConfig: |
-      buildConfigField "String", "API_URL", "\"https://api.example.com\""
-      buildConfigField "boolean", "ENABLE_LOGGING", "false"
-    
-    buildTypes: |
-      release {
-          shrinkResources true
-          minifyEnabled true
-      }
+  # custom_gradle_config:
+  #   defaultConfig: |
+  #     buildConfigField("String", "API_URL", "\"https://api.example.com\"")
+  #     buildConfigField("Boolean", "ENABLE_LOGGING", "false")
+  #   
+  #   buildTypes: |
+  #     release {
+  #         shrinkResources = true
+  #         isMinifyEnabled = true
+  #     }
   
   custom_info_plist_entries:
     API_URL: https://api.example.com
