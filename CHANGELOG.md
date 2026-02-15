@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.6] - 2026-02-15
+
+### Fixed
+- **Android SDK version handling** - Fixed regex patterns to properly match and replace SDK versions that reference variables (e.g., `flutter.minSdkVersion`)
+- SDK version insertion now properly adds missing values to `defaultConfig` or `android` blocks when they don't exist
+- Custom Gradle configuration now preserves proper indentation and provides warning about syntax compatibility
+
+### Changed
+- Improved regex patterns for `minSdk`, `targetSdk`, and `compileSdk` to match both numeric values and variable references (e.g., `[\w.]+` instead of `\d+`)
+- Added fallback logic to insert SDK version entries when they are missing from build files
+- Enhanced `_addCustomGradleConfig()` to detect and preserve existing indentation patterns
+
+### Added
+- Comprehensive test coverage for SDK version insertion scenarios
+- Tests for updating SDK versions with variable references (e.g., `flutter.minSdkVersion`)
+- Test for validating build.gradle.kts structure after modifications
+- Documentation file `CUSTOM_GRADLE_CONFIG.md` in example project explaining Groovy vs Kotlin DSL syntax differences
+- Fixed example project's build.gradle.kts to use proper Kotlin DSL syntax for product flavors
+
 ## [0.1.5] - 2026-02-08
 
 ### Changed
