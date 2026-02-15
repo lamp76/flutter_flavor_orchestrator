@@ -5,7 +5,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Flutter Flavor Orchestrator Example</string>
+	<string>FlavorApp Dev</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -45,5 +45,20 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>MinimumOSVersion</key>
+	<string>12.0</string>
+	<key>API_URL</key>
+	<string>https://dev-api.example.com</string>
+	<key>ENABLE_LOGGING</key>
+	<true/>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<true/>
+	</dict>
+	<key>API_KEY</key>
+	<string>dev_api_key_12345</string>
+	<key>ENVIRONMENT</key>
+	<string>development</string>
 </dict>
 </plist>

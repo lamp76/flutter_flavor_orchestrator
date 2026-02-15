@@ -204,6 +204,29 @@ final class IosProcessor {
             newEntry +
             content.substring(closingDictIndex);
       }
+      return content;
+    }
+
+    // Key exists, find and replace the value
+    final afterKey = content.substring(keyIndex + keyPattern.length);
+
+    // Match any plist value type after the key
+    final valuePattern = RegExp(
+      r'[\s\n]*(<string>.*?</string>|<integer>.*?</integer>|<real>.*?</real>|<true/>|<false/>|<data>.*?</data>|<date>.*?</date>|<array>.*?</array>|<dict>.*?</dict>)',
+      multiLine: true,
+      dotAll: true,
+    );
+
+    final match = valuePattern.firstMatch(afterKey);
+
+    if (match != null) {
+      final oldValue = match.group(1)!;
+      final beforeValue = content.substring(0, keyIndex + keyPattern.length);
+      final afterValue = content.substring(
+        keyIndex + keyPattern.length + match.end,
+      );
+
+      return beforeValue + '\n\t$valueTag' + afterValue;
     }
 
     return content;
