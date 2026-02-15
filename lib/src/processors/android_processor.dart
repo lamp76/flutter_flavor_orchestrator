@@ -548,17 +548,19 @@ final class AndroidProcessor {
     String content,
     Map<String, String> customConfig,
   ) {
-    logger.debug('Adding custom Gradle configuration...');
-    logger.warning(
-      'Custom Gradle configuration is provided as raw code snippets. '
-      'Ensure the syntax matches your build file type (Groovy vs Kotlin DSL).',
-    );
+    logger
+      ..debug('Adding custom Gradle configuration...')
+      ..warning(
+        'Custom Gradle configuration is provided as raw code snippets. '
+        'Ensure the syntax matches your build file type '
+        '(Groovy vs Kotlin DSL).',
+      );
 
     var updatedContent = content;
 
     for (final entry in customConfig.entries) {
       final section = entry.key;
-      var config = entry.value.trim();
+      final config = entry.value.trim();
 
       logger.debug('Adding config to section: $section');
 
@@ -570,18 +572,18 @@ final class AndroidProcessor {
         // Detect the indentation level after the opening brace
         final startPos = match.end;
         final afterBrace = updatedContent.substring(startPos);
-        final nextLineMatch = RegExp(r'\\n([ \\t]+)').firstMatch(afterBrace);
+        final nextLineMatch = RegExp(r'\n([ \t]+)').firstMatch(afterBrace);
 
-        String indent = '        '; // Default 8 spaces
+        var indent = '        '; // Default 8 spaces
         if (nextLineMatch != null && nextLineMatch.group(1)!.isNotEmpty) {
           indent = nextLineMatch.group(1)!;
         }
 
         // Add proper indentation to each line of the config
         final indentedConfig = config
-            .split('\\n')
+            .split(r'\n')
             .map((line) => line.trim().isEmpty ? '' : '$indent$line')
-            .join('\\n');
+            .join(r'\n');
 
         updatedContent = updatedContent.replaceFirst(
           sectionRegex,
