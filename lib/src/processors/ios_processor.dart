@@ -220,13 +220,12 @@ final class IosProcessor {
     final match = valuePattern.firstMatch(afterKey);
 
     if (match != null) {
-      final oldValue = match.group(1)!;
       final beforeValue = content.substring(0, keyIndex + keyPattern.length);
       final afterValue = content.substring(
         keyIndex + keyPattern.length + match.end,
       );
 
-      return beforeValue + '\n\t$valueTag' + afterValue;
+      return '$beforeValue\n\t$valueTag$afterValue';
     }
 
     return content;
