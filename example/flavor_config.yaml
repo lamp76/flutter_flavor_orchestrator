@@ -50,6 +50,22 @@ dev:
     ENABLE_LOGGING: true
     NSAppTransportSecurity:
       NSAllowsArbitraryLoads: true
+  
+  # File and folder mappings for flavor-specific assets
+  # Supports both individual files and recursive directory copying
+  file_mappings:
+    # Copy flavor-specific configuration file
+    'lib/config/app_config.dart': 'configs/dev/app_config.dart'
+    # Copy shared constants (same for all flavors)
+    'lib/config/constants.dart': 'configs/shared/constants.dart'
+    # Copy flavor-specific icons
+    'assets/app_icon.svg': 'assets/icons/dev/app_icon.svg'
+    # Replace entire theme directory with flavor-specific themes
+    'lib/theme': 'resources/dev/themes'
+  
+  # Replace destination directories completely when copying
+  # When true, existing directories are safely backed up before replacement
+  replace_destination_directories: true
 
 # Staging flavor
 staging:
@@ -85,6 +101,15 @@ staging:
   custom_info_plist_entries:
     API_URL: https://staging-api.example.com
     ENABLE_LOGGING: true
+  
+  # File mappings for staging environment
+  file_mappings:
+    'lib/config/app_config.dart': 'configs/staging/app_config.dart'
+    'lib/config/constants.dart': 'configs/shared/constants.dart'
+    'assets/app_icon.svg': 'assets/icons/staging/app_icon.svg'
+    'lib/theme': 'resources/staging/themes'
+  
+  replace_destination_directories: true
 
 # Production flavor
 production:
@@ -127,3 +152,12 @@ production:
     API_URL: https://api.example.com
     ENABLE_LOGGING: false
     ITSAppUsesNonExemptEncryption: false
+  
+  # File mappings for production environment
+  file_mappings:
+    'lib/config/app_config.dart': 'configs/production/app_config.dart'
+    'lib/config/constants.dart': 'configs/shared/constants.dart'
+    'assets/app_icon.svg': 'assets/icons/production/app_icon.svg'
+    'lib/theme': 'resources/production/themes'
+  
+  replace_destination_directories: true

@@ -128,6 +128,8 @@ Each flavor supports the following configuration options:
 | `ios_min_version` | String | ❌ | iOS minimum deployment target |
 | `custom_gradle_config` | Map | ❌ | Custom Gradle configuration snippets |
 | `custom_info_plist_entries` | Map | ❌ | Custom Info.plist entries |
+| `file_mappings` | Map | ❌ | Flavor-specific file/folder copying (source→destination) |
+| `replace_destination_directories` | Boolean | ❌ | Replace existing directories completely (default: false) |
 
 ### Provisioning Configuration
 
@@ -138,6 +140,64 @@ provisioning:
   additional_files:
     destination/path: source/path
 ```
+
+### File Mappings (New in v0.1.7)
+
+Copy flavor-specific files and folders from source to destination paths. Supports both individual files and recursive directory copying:
+
+```yaml
+dev:
+  bundle_id: com.example.app.dev
+  app_name: MyApp Dev
+  
+  # Enable complete directory replacement (optional, default: false)
+  replace_destination_directories: true
+  
+  file_mappings:
+    # Copy individual configuration files
+    'lib/config/app_config.dart': 'configs/dev/app_config.dart'
+    'lib/config/constants.dart': 'configs/shared/constants.dart'
+    
+    # Copy flavor-specific icons
+    'assets/app_icon.svg': 'assets/icons/dev/app_icon.svg'
+    
+    # Recursively copy entire directories
+    'android/app/src/main/res/drawable': 'assets/dev/android/drawables'
+    'ios/Runner/Assets.xcassets': 'assets/dev/ios/assets'
+    
+    # Replace entire theme directory (useful with replace_destination_directories)
+    'lib/theme': 'resources/dev/themes'
+
+production:
+  bundle_id: com.example.app
+  app_name: MyApp
+  replace_destination_directories: true
+  file_mappings:
+    'lib/config/app_config.dart': 'configs/production/app_config.dart'
+    'lib/config/constants.dart': 'configs/shared/constants.dart'
+    'assets/app_icon.svg': 'assets/icons/production/app_icon.svg'
+    'lib/theme': 'resources/production/themes'
+```
+
+**Features:**
+- 📁 Copy individual files or entire directory trees recursively
+- 🔄 Automatically replaces existing files at destination
+- 📂 Creates destination directories if they don't exist
+- 🔍 Detailed logging for each file operation
+- ⚠️ Skips non-existent source paths with warnings
+- 🔙 Full backup and rollback support
+
+**Directory Replacement Mode:**
+
+When `replace_destination_directories: true`:
+1. 🔒 **Safe Backup**: Existing destination directory is temporarily renamed
+2. 📋 **Copy New**: Complete directory tree is copied from source
+3. ✅ **Success**: Backup directory is removed
+4. ❌ **Failure**: Original directory is automatically restored
+
+This ensures atomic directory replacement - the destination is either completely replaced or left unchanged.
+
+See [example/assets/icons/README.md](example/assets/icons/README.md) and [example/resources/README.md](example/resources/README.md) for practical examples.
 
 ### Complete Example
 

@@ -1,0 +1,7 @@
+<!-- PRODUCTION Environment Icon -->
+<svg width="192" height="192" xmlns="http://www.w3.org/2000/svg">
+  <rect width="192" height="192" fill="#2196F3"/>
+  <text x="96" y="105" font-family="Arial, sans-serif" font-size="28" font-weight="bold" 
+        text-anchor="middle" fill="white">PRODUCTION</text>
+  <circle cx="96" cy="50" r="15" fill="#4CAF50"/>
+</svg>

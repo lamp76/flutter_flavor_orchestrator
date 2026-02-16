@@ -5,6 +5,47 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.7] - 2026-02-15
+
+### Added
+- **File Mappings Feature** - New `file_mappings` configuration field in `FlavorConfig` for flavor-specific file and folder copying
+- **AssetProcessor** - New processor for handling recursive file and directory copying from source to destination paths
+- **Directory Replacement Mode** - New `replace_destination_directories` configuration option for safe atomic directory replacement:
+  - Existing directories are temporarily renamed before copying new content
+  - Automatic rollback on failure restores original directory
+  - Ensures atomic replacement - destination is either completely replaced or unchanged
+  - Only affects directory mappings in `file_mappings`, not individual files
+- **Automatic Directory Traversal** - Supports both individual files and recursive directory copying with automatic subdirectory creation
+- **Comprehensive Logging** - Detailed logging for every file and folder operation with progress tracking
+- **Example Assets** - Added example icon files organized by flavor (dev/staging/production) in `example/assets/icons/`
+- **Example Resources** - Added flavor-specific theme directories in `example/resources/` demonstrating directory replacement
+- **Example Configuration Files** - Added flavor-specific app configuration examples in `example/configs/`
+- **Extensive Test Coverage** - New test suite for `AssetProcessor` covering:
+  - Single file copying
+  - Multiple file mappings
+  - Recursive directory copying
+  - File replacement scenarios
+  - Mixed file and directory operations
+  - Empty directory handling
+  - Non-existent source path handling
+  - Multi-flavor scenarios
+  - **Directory replacement with backup/restore**
+  - **Failure recovery and rollback**
+  - **Nested directory structure handling**
+
+### Changed
+- **FlavorConfig Model** - Extended with `fileMappings` property (Map<String, String>) for defining source→destination path mappings
+- **Orchestrator Integration** - Updated `FlavorOrchestrator.applyFlavor()` to process file mappings after platform-specific processors
+- **Example Configuration** - Updated `example/flavor_config.yaml` with practical `file_mappings` examples for all flavors
+
+### Features
+- Copy individual files from source to destination with automatic directory creation
+- Recursively copy entire directory trees while maintaining structure
+- Automatically replace existing files at destination
+- Skip non-existent source paths with warning logs
+- Track all operations for backup and rollback support
+- Detailed logging of each copied file with relative paths
+
 ## [0.1.6] - 2026-02-15
 
 ### Fixed

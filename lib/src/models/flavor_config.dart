@@ -25,6 +25,8 @@ final class FlavorConfig {
     this.iosMinVersion,
     this.customGradleConfig,
     this.customInfoPlistEntries = const {},
+    this.fileMappings = const {},
+    this.replaceDestinationDirectories = false,
   });
 
   /// Creates a [FlavorConfig] from a YAML map.
@@ -66,6 +68,13 @@ final class FlavorConfig {
                 yaml['custom_info_plist_entries'] as Map<dynamic, dynamic>,
               )
             : const <String, dynamic>{},
+        fileMappings: yaml['file_mappings'] != null
+            ? Map<String, String>.from(
+                yaml['file_mappings'] as Map<dynamic, dynamic>,
+              )
+            : const {},
+        replaceDestinationDirectories:
+            yaml['replace_destination_directories'] as bool? ?? false,
       );
 
   /// The flavor name (e.g., 'dev', 'staging', 'production').
@@ -116,6 +125,34 @@ final class FlavorConfig {
   /// Custom Info.plist entries to inject for iOS.
   final Map<String, dynamic> customInfoPlistEntries;
 
+  /// File and folder mappings for flavor-specific asset copying.
+  ///
+  /// The key is the destination path (relative to project root), and the value
+  /// is the source path (relative to project root). Supports both individual
+  /// files and recursive directory copying.
+  ///
+  /// Example:
+  /// ```yaml
+  /// file_mappings:
+  ///   'android/app/src/main/res/mipmap-hdpi': 'assets/dev/icons/hdpi'
+  ///   'ios/Runner/Assets.xcassets/AppIcon.appiconset': 'assets/dev/icons/ios'
+  ///   'lib/config/api_config.dart': 'configs/dev/api_config.dart'
+  /// ```
+  final Map<String, String> fileMappings;
+
+  /// Whether to replace destination directories completely.
+  ///
+  /// When true, if a destination directory already exists for a directory
+  /// mapping in [fileMappings], it will be safely replaced:
+  /// 1. The existing directory is temporarily renamed
+  /// 2. The new directory tree is copied
+  /// 3. On success, the old directory is removed
+  /// 4. On failure, the old directory is restored
+  ///
+  /// This ensures atomic directory replacement with automatic rollback.
+  /// Only affects directory mappings, not individual file mappings.
+  final bool replaceDestinationDirectories;
+
   /// Converts this config to a YAML-compatible map.
   Map<String, dynamic> toYaml() => {
         'bundle_id': bundleId,
@@ -136,6 +173,9 @@ final class FlavorConfig {
           'custom_gradle_config': customGradleConfig,
         if (customInfoPlistEntries.isNotEmpty)
           'custom_info_plist_entries': customInfoPlistEntries,
+        if (fileMappings.isNotEmpty) 'file_mappings': fileMappings,
+        if (replaceDestinationDirectories)
+          'replace_destination_directories': replaceDestinationDirectories,
       };
 
   @override

@@ -2,6 +2,7 @@ import 'dart:io';
 import 'config_parser.dart';
 import 'models/flavor_config.dart';
 import 'processors/android_processor.dart';
+import 'processors/asset_processor.dart';
 import 'processors/ios_processor.dart';
 import 'utils/file_manager.dart';
 import 'utils/logger.dart';
@@ -29,6 +30,11 @@ final class FlavorOrchestrator {
       fileManager: fileManager,
       logger: logger,
     );
+    assetProcessor = AssetProcessor(
+      projectRoot: projectRoot,
+      fileManager: fileManager,
+      logger: logger,
+    );
   }
 
   /// Root directory of the Flutter project.
@@ -51,6 +57,9 @@ final class FlavorOrchestrator {
 
   /// iOS processor.
   late final IosProcessor iosProcessor;
+
+  /// Asset processor for file mappings.
+  late final AssetProcessor assetProcessor;
 
   /// Applies a flavor configuration to the project.
   ///
@@ -97,6 +106,9 @@ final class FlavorOrchestrator {
       if (processIos) {
         await iosProcessor.process(projectRoot, config);
       }
+
+      // Process file mappings (asset copying)
+      await assetProcessor.processFileMappings(config);
 
       // Commit all file changes
       await fileManager.commit();
