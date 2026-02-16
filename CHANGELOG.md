@@ -5,6 +5,45 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.8] - 2026-02-16
+
+### Added
+- **Enhanced Example App UI** - Completely redesigned example app to visually demonstrate flavor-specific resources:
+  - **App Icon Display** - Shows flavor-specific SVG icons (dev/staging/production) with rounded corners and shadow
+  - **Environment Info Section** - Displays current flavor label and debug banner status
+  - **Color Showcase** - Visual color chips displaying all flavor colors (primary, accent, background, success, warning, error, text)
+  - **Typography Preview** - Live examples of heading, body, and caption text with size information
+  - **Configuration Display** - Shows all flavor-specific config values (API URL, environment, timeout, analytics, debug mode)
+  - **Scrollable Layout** - ListView with card-based sections for better organization and readability
+- **flutter_svg Dependency** - Added `flutter_svg: ^2.0.10+1` to example app for SVG icon rendering
+- **Icon Assets Configuration** - Added asset paths for flavor-specific SVG icons in example pubspec.yaml
+- **Fallback Files** - Created placeholder files in `lib/theme/` and `lib/config/` that display "NO FLAVOR" when orchestrator hasn't been applied
+  - `lib/theme/app_theme.dart` - Fallback AppTheme class with grey colors
+  - `lib/theme/colors.dart` - Fallback ColorPalette class
+  - `lib/theme/typography.dart` - Fallback Typography class  
+  - `lib/config/app_config.dart` - Fallback AppConfig class
+
+### Changed
+- **Example App Structure** - Updated `example/lib/main.dart` to use class-based theme/config imports matching the flavor orchestrator's file structure
+- **Theme Integration** - App now uses `AppTheme.lightTheme` and `AppTheme.showDebugBanner` from copied flavor files
+- **Color Handling** - Updated to work with hex color strings from `ColorPalette` class, converting to Flutter Color objects
+- **Typography Namespace** - Added import prefix `app_typography` to avoid conflicts with Flutter's built-in Typography class
+- **Example App Behavior** - App now provides immediate visual feedback when different flavors are applied, making testing more intuitive
+
+### Fixed
+- **Import Conflicts** - Resolved naming conflicts between custom Typography class and Flutter's Typography
+- **Const TextStyle Issues** - Removed const modifiers where dynamic values from flavor configs are used
+- **Compilation Errors** - Fixed all type mismatches and undefined reference errors when flavor files are applied
+
+### Technical Details
+- Example app now correctly imports and uses:
+  - `AppTheme` class for theme configuration and environment labels
+  - `ColorPalette` class for hex color definitions
+  - `Typography` class for font and size specifications
+  - `AppConfig` class for API and feature configuration
+- Hex color string to Color conversion implemented for visual color chips
+- Dynamic icon path selection based on environment label (dev/staging/production)
+
 ## [0.1.7] - 2026-02-15
 
 ### Added

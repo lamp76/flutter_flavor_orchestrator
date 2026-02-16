@@ -11,6 +11,7 @@ dependencies:
   flutter:
     sdk: flutter
   cupertino_icons: ^1.0.2
+  flutter_svg: ^2.0.10+1
 
 dev_dependencies:
   flutter_test:
@@ -27,3 +28,6 @@ flutter:
     - assets/dev/
     - assets/staging/
     - assets/production/
+    - assets/icons/dev/
+    - assets/icons/staging/
+    - assets/icons/production/
