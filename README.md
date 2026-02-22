@@ -8,12 +8,12 @@
 
 Build-time orchestration for Flutter flavors across Android and iOS. Configure environment-specific app identity, native metadata, provisioning files, and resource mappings from a single YAML source.
 
-## What's New (v0.1.8)
+## What's New (v0.1.9)
 
-- **Example UI Showcase** - The example app visually confirms active flavor resources (icons, colors, typography, config values)
-- **File Mappings + Directory Replacement** - Copy files/folders per flavor and safely replace destination directories atomically
-- **Fallback Placeholders** - Example includes `NO FLAVOR` files so it is obvious when orchestration has not been applied yet
-- **Kotlin/Groovy Guidance** - Clear `custom_gradle_config` syntax guidance for both `build.gradle` and `build.gradle.kts`
+- **External YAML Config Path (`--config`)** - Load flavor configuration from a YAML file outside project root (absolute or relative path)
+- **CI/CD Friendly Workflow** - Keep production config outside repository and inject it at runtime (for example Jenkins)
+- **Programmatic Config Path Support** - `FlavorOrchestrator` supports `configPath` for explicit external configuration loading
+- **Backward-Compatible Fallback** - Existing `flavor_config.yaml` / `pubspec.yaml` behavior remains unchanged when `--config` is not provided
 
 ## ✨ Features
 
@@ -33,7 +33,7 @@ Build-time orchestration for Flutter flavors across Android and iOS. Configure e
 ## 📋 Table of Contents
 
 - [Installation](#installation)
-- [What's New (v0.1.8)](#whats-new-v018)
+- [What's New (v0.1.9)](#whats-new-v019)
 - [Quick Start](#quick-start)
 - [Pub.dev Workflow](#pubdev-workflow)
 - [Configuration](#configuration)
@@ -53,7 +53,7 @@ Add `flutter_flavor_orchestrator` to your `pubspec.yaml` dev dependencies:
 
 ```yaml
 dev_dependencies:
-  flutter_flavor_orchestrator: ^0.1.8
+  flutter_flavor_orchestrator: ^0.1.9
 ```
 
 Then run:
@@ -139,6 +139,7 @@ Recommended for CI/CD:
 - Run `validate` as an early pipeline step
 - Use explicit flavor names (`dev`, `staging`, `production`) in build jobs
 - Keep flavor-specific files under `configs/`, `assets/`, and `resources/`
+- Pass `--config` to load a YAML file from a secure external path (for example Jenkins workspace/secret mounts)
 
 ## ⚙️ Configuration
 
@@ -148,6 +149,14 @@ You can place your flavor configuration in either:
 
 1. **Dedicated file**: `flavor_config.yaml` in your project root (recommended)
 2. **In pubspec.yaml**: Under a `flavor_config` section
+3. **External file path**: Any YAML file passed at runtime with `--config`
+
+External path examples:
+
+```bash
+flutter_flavor_orchestrator apply --flavor production --config /secure/jenkins/flavor_config.yaml
+flutter_flavor_orchestrator validate --config ./ci/flavor_config.yaml
+```
 
 ### Configuration Options
 
@@ -255,6 +264,9 @@ Apply a flavor configuration to your project:
 # Apply to both platforms
 flutter_flavor_orchestrator apply --flavor dev
 
+# Apply using an external YAML config file
+flutter_flavor_orchestrator apply --flavor production --config /secure/jenkins/flavor_config.yaml
+
 # Apply to Android only
 flutter_flavor_orchestrator apply --flavor staging --platform android
 
@@ -276,6 +288,9 @@ List all available flavors:
 
 ```bash
 flutter_flavor_orchestrator list
+
+# List flavors from external YAML
+flutter_flavor_orchestrator list --config ./ci/flavor_config.yaml
 ```
 
 Output includes, for each flavor:
@@ -288,6 +303,9 @@ Display detailed information about a specific flavor:
 
 ```bash
 flutter_flavor_orchestrator info --flavor production
+
+# Inspect a flavor from external YAML
+flutter_flavor_orchestrator info --flavor production --config ./ci/flavor_config.yaml
 ```
 
 Output includes:
@@ -301,6 +319,9 @@ Validate all flavor configurations:
 
 ```bash
 flutter_flavor_orchestrator validate
+
+# Validate external YAML
+flutter_flavor_orchestrator validate --config ./ci/flavor_config.yaml
 ```
 
 Output includes, for each flavor:
@@ -487,6 +508,7 @@ import 'package:flutter_flavor_orchestrator/flutter_flavor_orchestrator.dart';
 void main() async {
   final orchestrator = FlavorOrchestrator(
     projectRoot: '/path/to/project',
+    configPath: '/secure/jenkins/flavor_config.yaml',
     verbose: true,
   );
 

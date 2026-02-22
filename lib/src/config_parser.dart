@@ -26,48 +26,77 @@ final class ConfigParser {
   /// If not found, looks for a `flavor_config` section in `pubspec.yaml`.
   ///
   /// [projectRoot] is the root directory of the Flutter project.
+  /// [configPath] optionally points to a specific YAML config file.
   ///
   /// Returns a map of flavor names to [FlavorConfig] instances.
   ///
   /// Throws [FormatException] if the YAML is invalid.
   /// Throws [FileSystemException] if no configuration file is found.
-  Future<Map<String, FlavorConfig>> parseConfig(String projectRoot) async {
+  Future<Map<String, FlavorConfig>> parseConfig(
+    String projectRoot, {
+    String? configPath,
+  }) async {
     logger.debug('Parsing flavor configuration from: $projectRoot');
-
-    // Try dedicated flavor_config.yaml first
-    final flavorConfigPath = path.join(projectRoot, 'flavor_config.yaml');
-    final flavorConfigFile = File(flavorConfigPath);
 
     Map<dynamic, dynamic> configYaml;
 
-    if (await flavorConfigFile.exists()) {
-      logger.debug('Found flavor_config.yaml');
-      final content = await flavorConfigFile.readAsString();
+    if (configPath != null && configPath.trim().isNotEmpty) {
+      final resolvedPath = path.isAbsolute(configPath)
+          ? configPath
+          : path.join(projectRoot, configPath);
+      final configFile = File(resolvedPath);
+
+      logger
+        ..debug('Using external configuration file: $resolvedPath')
+        ..info('Loading configuration from: $resolvedPath');
+
+      if (!await configFile.exists()) {
+        throw FileSystemException(
+          'Configuration file not found',
+          resolvedPath,
+        );
+      }
+
+      final content = await configFile.readAsString();
       final yaml = loadYaml(content) as YamlMap;
       configYaml = _extractFlavorConfig(yaml);
     } else {
-      // Try pubspec.yaml
-      logger.debug('flavor_config.yaml not found, checking pubspec.yaml');
-      final pubspecPath = path.join(projectRoot, 'pubspec.yaml');
-      final pubspecFile = File(pubspecPath);
+      // Try dedicated flavor_config.yaml first
+      final flavorConfigPath = path.join(projectRoot, 'flavor_config.yaml');
+      final flavorConfigFile = File(flavorConfigPath);
 
-      if (!await pubspecFile.exists()) {
-        throw FileSystemException(
-          'No pubspec.yaml found in project root',
-          projectRoot,
-        );
+      if (await flavorConfigFile.exists()) {
+        logger
+          ..debug('Found flavor_config.yaml')
+          ..info('Loading configuration from: $flavorConfigPath');
+        final content = await flavorConfigFile.readAsString();
+        final yaml = loadYaml(content) as YamlMap;
+        configYaml = _extractFlavorConfig(yaml);
+      } else {
+        // Try pubspec.yaml
+        logger.debug('flavor_config.yaml not found, checking pubspec.yaml');
+        final pubspecPath = path.join(projectRoot, 'pubspec.yaml');
+        final pubspecFile = File(pubspecPath);
+
+        if (!await pubspecFile.exists()) {
+          throw FileSystemException(
+            'No pubspec.yaml found in project root',
+            projectRoot,
+          );
+        }
+
+        final content = await pubspecFile.readAsString();
+        final yaml = loadYaml(content) as YamlMap;
+
+        if (!yaml.containsKey('flavor_config')) {
+          throw const FormatException(
+            'No flavor_config found in pubspec.yaml or flavor_config.yaml',
+          );
+        }
+
+        logger.info('Loading configuration from: $pubspecPath');
+        configYaml = _extractFlavorConfig(yaml);
       }
-
-      final content = await pubspecFile.readAsString();
-      final yaml = loadYaml(content) as YamlMap;
-
-      if (!yaml.containsKey('flavor_config')) {
-        throw const FormatException(
-          'No flavor_config found in pubspec.yaml or flavor_config.yaml',
-        );
-      }
-
-      configYaml = _extractFlavorConfig(yaml);
     }
 
     return _parseFlavorConfigs(configYaml);
@@ -77,17 +106,22 @@ final class ConfigParser {
   ///
   /// [projectRoot] is the root directory of the Flutter project.
   /// [flavorName] is the name of the flavor to parse.
+  /// [configPath] optionally points to a specific YAML config file.
   ///
   /// Returns a [FlavorConfig] instance for the specified flavor.
   ///
   /// Throws [FormatException] if the flavor is not found.
   Future<FlavorConfig> parseFlavorConfig(
     String projectRoot,
-    String flavorName,
-  ) async {
+    String flavorName, {
+    String? configPath,
+  }) async {
     logger.debug('Parsing flavor configuration for: $flavorName');
 
-    final allConfigs = await parseConfig(projectRoot);
+    final allConfigs = await parseConfig(
+      projectRoot,
+      configPath: configPath,
+    );
 
     if (!allConfigs.containsKey(flavorName)) {
       throw FormatException(
@@ -102,8 +136,15 @@ final class ConfigParser {
   /// Gets a list of all available flavor names.
   ///
   /// [projectRoot] is the root directory of the Flutter project.
-  Future<List<String>> getAvailableFlavors(String projectRoot) async {
-    final configs = await parseConfig(projectRoot);
+  /// [configPath] optionally points to a specific YAML config file.
+  Future<List<String>> getAvailableFlavors(
+    String projectRoot, {
+    String? configPath,
+  }) async {
+    final configs = await parseConfig(
+      projectRoot,
+      configPath: configPath,
+    );
     return configs.keys.toList();
   }
 

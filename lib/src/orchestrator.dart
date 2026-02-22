@@ -18,6 +18,7 @@ final class FlavorOrchestrator {
   /// [verbose] enables detailed debug logging.
   FlavorOrchestrator({
     required this.projectRoot,
+    this.configPath,
     this.verbose = false,
   })  : logger = Logger(verbose: verbose),
         fileManager = FileManager(logger: Logger(verbose: verbose)) {
@@ -39,6 +40,9 @@ final class FlavorOrchestrator {
 
   /// Root directory of the Flutter project.
   final String projectRoot;
+
+  /// Optional external path to flavor configuration YAML file.
+  final String? configPath;
 
   /// Whether to show verbose debug output.
   final bool verbose;
@@ -88,6 +92,7 @@ final class FlavorOrchestrator {
       final config = await configParser.parseFlavorConfig(
         projectRoot,
         flavorName,
+        configPath: configPath,
       );
 
       logger
@@ -150,7 +155,10 @@ final class FlavorOrchestrator {
     try {
       logger.section('Available Flavors');
 
-      final configs = await configParser.parseConfig(projectRoot);
+      final configs = await configParser.parseConfig(
+        projectRoot,
+        configPath: configPath,
+      );
       final flavors = configs.keys.toList()..sort();
 
       if (flavors.isEmpty) {
@@ -197,6 +205,7 @@ final class FlavorOrchestrator {
       final config = await configParser.parseFlavorConfig(
         projectRoot,
         flavorName,
+        configPath: configPath,
       );
 
       _printFlavorConfig(config);
@@ -214,7 +223,10 @@ final class FlavorOrchestrator {
     try {
       logger.section('Validating Configurations');
 
-      final configs = await configParser.parseConfig(projectRoot);
+      final configs = await configParser.parseConfig(
+        projectRoot,
+        configPath: configPath,
+      );
 
       if (configs.isEmpty) {
         logger.error('No configurations found');

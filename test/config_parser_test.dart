@@ -75,6 +75,72 @@ flavor_config:
       expect(configs['staging']!.bundleId, equals('com.example.staging'));
     });
 
+    test('parses config from external path when provided', () async {
+      final externalConfigDir = await Directory.systemTemp.createTemp(
+        'external_flavor_config_',
+      );
+      addTearDown(() async {
+        if (await externalConfigDir.exists()) {
+          await externalConfigDir.delete(recursive: true);
+        }
+      });
+
+      final externalConfigFile =
+          File('${externalConfigDir.path}/ci_flavor_config.yaml');
+      await externalConfigFile.writeAsString('''
+production:
+  bundle_id: com.example.ci.production
+  app_name: App CI Production
+''');
+
+      final pubspecFile = File('${tempDir.path}/pubspec.yaml');
+      await pubspecFile.writeAsString('''
+name: test_app
+flutter:
+  uses-material-design: true
+''');
+
+      final configs = await parser.parseConfig(
+        tempDir.path,
+        configPath: externalConfigFile.path,
+      );
+
+      expect(configs.length, equals(1));
+      expect(configs.containsKey('production'), isTrue);
+      expect(
+        configs['production']!.bundleId,
+        equals('com.example.ci.production'),
+      );
+    });
+
+    test('parses config from relative external path', () async {
+      final ciDir = Directory('${tempDir.path}/ci');
+      await ciDir.create(recursive: true);
+
+      final externalConfigFile = File('${ciDir.path}/flavor_config.yaml');
+      await externalConfigFile.writeAsString('''
+staging:
+  bundle_id: com.example.ci.staging
+  app_name: App CI Staging
+''');
+
+      final pubspecFile = File('${tempDir.path}/pubspec.yaml');
+      await pubspecFile.writeAsString('''
+name: test_app
+flutter:
+  uses-material-design: true
+''');
+
+      final configs = await parser.parseConfig(
+        tempDir.path,
+        configPath: 'ci/flavor_config.yaml',
+      );
+
+      expect(configs.length, equals(1));
+      expect(configs.containsKey('staging'), isTrue);
+      expect(configs['staging']!.bundleId, equals('com.example.ci.staging'));
+    });
+
     test('parses specific flavor configuration', () async {
       final configFile = File('${tempDir.path}/flavor_config.yaml');
       await configFile.writeAsString('''
@@ -170,6 +236,24 @@ production:
       expect(
         () => parser.parseConfig(tempDir.path),
         throwsA(isA<FormatException>()),
+      );
+    });
+
+    test('throws FileSystemException when external config path is missing',
+        () async {
+      final pubspecFile = File('${tempDir.path}/pubspec.yaml');
+      await pubspecFile.writeAsString('''
+name: test_app
+flutter:
+  uses-material-design: true
+''');
+
+      expect(
+        () => parser.parseConfig(
+          tempDir.path,
+          configPath: '${tempDir.path}/missing/flavor_config.yaml',
+        ),
+        throwsA(isA<FileSystemException>()),
       );
     });
   });

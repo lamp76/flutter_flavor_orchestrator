@@ -2,6 +2,9 @@ import 'dart:io';
 import 'package:args/args.dart';
 import 'package:flutter_flavor_orchestrator/flutter_flavor_orchestrator.dart';
 
+const _externalConfigHelp = 'Path to an external YAML config file '
+    '(absolute or relative to project root).';
+
 /// CLI entry point for the Flutter Flavor Orchestrator.
 ///
 /// Provides a command-line interface for managing Flutter flavor
@@ -101,6 +104,11 @@ ArgParser _buildApplyCommand() => ArgParser()
     mandatory: true,
     help: 'The flavor to apply (e.g., dev, staging, production).',
   )
+  ..addOption(
+    'config',
+    abbr: 'c',
+    help: _externalConfigHelp,
+  )
   ..addMultiOption(
     'platform',
     abbr: 'p',
@@ -116,6 +124,11 @@ ArgParser _buildApplyCommand() => ArgParser()
 
 /// Builds the argument parser for the 'list' command.
 ArgParser _buildListCommand() => ArgParser()
+  ..addOption(
+    'config',
+    abbr: 'c',
+    help: _externalConfigHelp,
+  )
   ..addFlag(
     'verbose',
     negatable: false,
@@ -130,6 +143,11 @@ ArgParser _buildInfoCommand() => ArgParser()
     mandatory: true,
     help: 'The flavor to display information for.',
   )
+  ..addOption(
+    'config',
+    abbr: 'c',
+    help: _externalConfigHelp,
+  )
   ..addFlag(
     'verbose',
     negatable: false,
@@ -138,6 +156,11 @@ ArgParser _buildInfoCommand() => ArgParser()
 
 /// Builds the argument parser for the 'validate' command.
 ArgParser _buildValidateCommand() => ArgParser()
+  ..addOption(
+    'config',
+    abbr: 'c',
+    help: _externalConfigHelp,
+  )
   ..addFlag(
     'verbose',
     negatable: false,
@@ -161,9 +184,11 @@ Future<void> _handleApplyCommand(
 
   final platforms = command['platform'] as List<String>;
   final verbose = command['verbose'] as bool;
+  final configPath = command['config'] as String?;
 
   final orchestrator = FlavorOrchestrator(
     projectRoot: projectRoot,
+    configPath: configPath,
     verbose: verbose,
   );
 
@@ -188,9 +213,11 @@ Future<void> _handleListCommand(
   String projectRoot,
 ) async {
   final verbose = command['verbose'] as bool;
+  final configPath = command['config'] as String?;
 
   final orchestrator = FlavorOrchestrator(
     projectRoot: projectRoot,
+    configPath: configPath,
     verbose: verbose,
   );
 
@@ -222,9 +249,11 @@ Future<void> _handleInfoCommand(
   }
 
   final verbose = command['verbose'] as bool;
+  final configPath = command['config'] as String?;
 
   final orchestrator = FlavorOrchestrator(
     projectRoot: projectRoot,
+    configPath: configPath,
     verbose: verbose,
   );
 
@@ -243,9 +272,11 @@ Future<void> _handleValidateCommand(
   String projectRoot,
 ) async {
   final verbose = command['verbose'] as bool;
+  final configPath = command['config'] as String?;
 
   final orchestrator = FlavorOrchestrator(
     projectRoot: projectRoot,
+    configPath: configPath,
     verbose: verbose,
   );
 
@@ -282,6 +313,9 @@ EXAMPLES:
   # Apply a flavor configuration
   flutter_flavor_orchestrator apply --flavor dev
 
+  # Apply using an external YAML config file
+  flutter_flavor_orchestrator apply --flavor production --config /secure/jenkins/flavor_config.yaml
+
   # Apply only to Android
   flutter_flavor_orchestrator apply --flavor production --platform android
 
@@ -297,6 +331,9 @@ EXAMPLES:
   # Validate all configurations
   flutter_flavor_orchestrator validate
 
+  # Validate using an external YAML config file
+  flutter_flavor_orchestrator validate --config /secure/jenkins/flavor_config.yaml
+
 For more information, visit:
 https://github.com/alessiolm/flutter_flavor_orchestrator
 ''');
@@ -304,5 +341,5 @@ https://github.com/alessiolm/flutter_flavor_orchestrator
 
 /// Prints version information.
 void _printVersion() {
-  stdout.writeln('Flutter Flavor Orchestrator v0.1.8');
+  stdout.writeln('Flutter Flavor Orchestrator v0.1.9');
 }

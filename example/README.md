@@ -11,6 +11,7 @@ This example demonstrates how to use the `flutter_flavor_orchestrator` package t
 - ✅ SDK version configuration
 - ✅ Custom Gradle and Info.plist entries
 - ✅ Flavor-specific assets
+- ✅ External YAML config loading with `--config` (CI/CD friendly)
 
 ## Project Structure
 
@@ -73,6 +74,15 @@ flutter_flavor_orchestrator apply --flavor production --platform ios
 
 ```bash
 flutter_flavor_orchestrator validate
+```
+
+### 5. Use External Configuration Path (CI/CD)
+
+Load flavor configuration from a YAML file outside the project root:
+
+```bash
+flutter_flavor_orchestrator apply --flavor production --config /secure/jenkins/flavor_config.yaml
+flutter_flavor_orchestrator validate --config /secure/jenkins/flavor_config.yaml
 ```
 
 ## Configuration Explained

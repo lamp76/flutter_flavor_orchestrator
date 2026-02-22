@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.9] - 2026-02-22
+
+### Added
+- **External YAML Configuration Path** - New CLI option `--config` (`-c`) for loading flavor configuration from a YAML file outside the project root, designed for CI/CD workflows (for example Jenkins).
+- **Programmatic External Config Support** - `FlavorOrchestrator` now accepts `configPath` to load configuration from an explicit external YAML file.
+- **Parser External Path Handling** - `ConfigParser` now supports explicit external config paths (absolute or project-relative) with clear missing-file errors.
+- **Test Coverage for External Config** - Added parser tests for:
+  - absolute external config path
+  - project-relative external config path
+  - missing external config file behavior
+
+### Changed
+- **CLI Commands Updated** - `apply`, `list`, `info`, and `validate` now accept `--config`.
+- **Documentation Updates** - README and example docs updated with 0.1.9 references and CI/CD examples for external config usage.
+
 ## [0.1.8] - 2026-02-16
 
 ### Added
@@ -182,5 +197,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Detailed logging for debugging and auditing
 - Extensible architecture for future enhancements
 
+[0.1.9]: https://github.com/lamp76/flutter_flavor_orchestrator/releases/tag/v0.1.9
+[0.1.8]: https://github.com/lamp76/flutter_flavor_orchestrator/releases/tag/v0.1.8
 [0.1.1]: https://github.com/lamp76/flutter_flavor_orchestrator/releases/tag/v0.1.1
-[0.1.0]: https://github.com/alessiolm/flutter_flavor_orchestrator/releases/tag/v0.1.0
+[0.1.0]: https://github.com/lamp76/flutter_flavor_orchestrator/releases/tag/v0.1.0
