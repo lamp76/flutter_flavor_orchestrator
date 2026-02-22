@@ -2,9 +2,13 @@
 
 ☕ **[Buy me a coffee on Ko-fi](https://ko-fi.com/lamp76)** - If this package helps you, consider supporting my work!
 
+[![CI](https://github.com/lamp76/flutter_flavor_orchestrator/actions/workflows/ci.yml/badge.svg)](https://github.com/lamp76/flutter_flavor_orchestrator/actions/workflows/ci.yml)
 [![pub package](https://img.shields.io/pub/v/flutter_flavor_orchestrator.svg)](https://pub.dev/packages/flutter_flavor_orchestrator)
+[![pub points](https://img.shields.io/pub/points/flutter_flavor_orchestrator)](https://pub.dev/packages/flutter_flavor_orchestrator/score)
+[![popularity](https://img.shields.io/pub/popularity/flutter_flavor_orchestrator)](https://pub.dev/packages/flutter_flavor_orchestrator/score)
+[![likes](https://img.shields.io/pub/likes/flutter_flavor_orchestrator)](https://pub.dev/packages/flutter_flavor_orchestrator/score)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Ko-fi](https://img.shields.io/badge/Ko--fi-Support%20Me-FF5E5B?logo=ko-fi&logoColor=white)](https://ko-fi.com/lamp76) 
+[![Ko-fi](https://img.shields.io/badge/Ko--fi-Support%20Me-FF5E5B?logo=ko-fi&logoColor=white)](https://ko-fi.com/lamp76)
 
 Build-time orchestration for Flutter flavors across Android and iOS. Configure environment-specific app identity, native metadata, provisioning files, and resource mappings from a single YAML source.
 

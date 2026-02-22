@@ -3,6 +3,18 @@ description: A build-time orchestrator for managing Flutter flavors, native conf
 version: 0.2.0
 repository: https://github.com/lamp76/flutter_flavor_orchestrator.git
 homepage: https://github.com/lamp76/flutter_flavor_orchestrator.git
+issue_tracker: https://github.com/lamp76/flutter_flavor_orchestrator/issues
+documentation: https://pub.dev/documentation/flutter_flavor_orchestrator/latest/
+
+topics:
+  - flutter
+  - flavor
+  - environment
+  - android
+  - ios
+
+funding:
+  - https://ko-fi.com/lamp76
 
 environment:
   sdk: ^3.0.0
