@@ -95,6 +95,8 @@ final class FlavorOrchestrator {
         ..debug('Bundle ID: ${config.bundleId}')
         ..debug('App Name: ${config.appName}');
 
+      _printFileMappingSummary(config);
+
       // Process platforms
       final processAndroid = platforms.contains('android');
       final processIos = platforms.contains('ios');
@@ -148,7 +150,8 @@ final class FlavorOrchestrator {
     try {
       logger.section('Available Flavors');
 
-      final flavors = await configParser.getAvailableFlavors(projectRoot);
+      final configs = await configParser.parseConfig(projectRoot);
+      final flavors = configs.keys.toList()..sort();
 
       if (flavors.isEmpty) {
         logger.warning('No flavors found in configuration');
@@ -157,13 +160,30 @@ final class FlavorOrchestrator {
 
       logger.info('Found ${flavors.length} flavor(s):');
       for (final flavor in flavors) {
-        logger.info('  - $flavor');
+        final config = configs[flavor];
+        if (config == null) {
+          logger.info('  - $flavor');
+          continue;
+        }
+
+        logger.info(
+          '  - $flavor '
+          '(file_mappings: ${config.fileMappings.length}, '
+          'replace_destination_directories: '
+          '${config.replaceDestinationDirectories})',
+        );
       }
 
+      logger.info(
+        'Tip: run `flutter_flavor_orchestrator info --flavor <name>` '
+        'for full mapping details.',
+      );
+
       return flavors;
-    } on Exception catch (e, stackTrace) {
-      logger.error('Failed to list flavors', e, stackTrace);
-      return [];
+    } on FormatException {
+      rethrow;
+    } on FileSystemException {
+      rethrow;
     }
   }
 
@@ -180,8 +200,10 @@ final class FlavorOrchestrator {
       );
 
       _printFlavorConfig(config);
-    } on Exception catch (e, stackTrace) {
-      logger.error('Failed to get flavor information', e, stackTrace);
+    } on FormatException {
+      rethrow;
+    } on FileSystemException {
+      rethrow;
     }
   }
 
@@ -206,9 +228,10 @@ final class FlavorOrchestrator {
 
         try {
           configParser.validateConfig(config);
+          _printValidationFeatureSummary(config);
           logger.success('✓ ${config.name} is valid');
-        } on Exception catch (e) {
-          logger.error('✗ ${config.name} is invalid', e);
+        } on FormatException catch (e) {
+          logger.error('✗ ${config.name} is invalid: ${e.message}');
           allValid = false;
         }
       }
@@ -224,9 +247,10 @@ final class FlavorOrchestrator {
       }
 
       return allValid;
-    } on Exception catch (e, stackTrace) {
-      logger.error('Failed to validate configurations', e, stackTrace);
-      return false;
+    } on FormatException {
+      rethrow;
+    } on FileSystemException {
+      rethrow;
     }
   }
 
@@ -316,6 +340,65 @@ final class FlavorOrchestrator {
           '  iOS: ${config.provisioning!.iosGoogleServicePath}',
         );
       }
+    }
+
+    logger.info('File mappings:');
+    if (config.fileMappings.isEmpty) {
+      logger.info('  none');
+    } else {
+      logger.info(
+        '  ${config.fileMappings.length} mapping(s) '
+        '(destination <- source):',
+      );
+      for (final mapping in config.fileMappings.entries) {
+        logger.info('  ${mapping.key} <- ${mapping.value}');
+      }
+    }
+
+    logger
+      ..info(
+        'replace_destination_directories: '
+        '${config.replaceDestinationDirectories}',
+      )
+      ..info(
+        '  Applies only to directory mappings in file_mappings. '
+        'When true, existing destination directories are backed up and '
+        'atomically replaced with automatic rollback on failure.',
+      );
+  }
+
+  void _printFileMappingSummary(FlavorConfig config) {
+    logger
+      ..info('File mapping configuration:')
+      ..info('  file_mappings: ${config.fileMappings.length} mapping(s)')
+      ..info(
+        '  replace_destination_directories: '
+        '${config.replaceDestinationDirectories}',
+      );
+
+    if (config.fileMappings.isNotEmpty && verbose) {
+      logger.info('  mapping details (destination <- source):');
+      for (final mapping in config.fileMappings.entries) {
+        logger.info('  ${mapping.key} <- ${mapping.value}');
+      }
+    }
+  }
+
+  void _printValidationFeatureSummary(FlavorConfig config) {
+    logger
+      ..info(
+        '  file_mappings: ${config.fileMappings.length} mapping(s)',
+      )
+      ..info(
+        '  replace_destination_directories: '
+        '${config.replaceDestinationDirectories}',
+      );
+
+    if (config.replaceDestinationDirectories) {
+      logger.info(
+        '  directory replacement is enabled for directory '
+        'entries in file_mappings',
+      );
     }
   }
 }

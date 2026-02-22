@@ -1,4 +1,4 @@
-# Flutter Flavor Orchestrator 🎨
+# Flutter Flavor Orchestrator
 
 ☕ **[Buy me a coffee on Ko-fi](https://ko-fi.com/lamp76)** - If this package helps you, consider supporting my work!
 
@@ -6,32 +6,43 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Ko-fi](https://img.shields.io/badge/Ko--fi-Support%20Me-FF5E5B?logo=ko-fi&logoColor=white)](https://ko-fi.com/lamp76) 
 
-A powerful, enterprise-grade build-time orchestrator for managing Flutter flavors, native configurations, and provisioning files across Android and iOS platforms.
+Build-time orchestration for Flutter flavors across Android and iOS. Configure environment-specific app identity, native metadata, provisioning files, and resource mappings from a single YAML source.
+
+## What's New (v0.1.8)
+
+- **Example UI Showcase** - The example app visually confirms active flavor resources (icons, colors, typography, config values)
+- **File Mappings + Directory Replacement** - Copy files/folders per flavor and safely replace destination directories atomically
+- **Fallback Placeholders** - Example includes `NO FLAVOR` files so it is obvious when orchestration has not been applied yet
+- **Kotlin/Groovy Guidance** - Clear `custom_gradle_config` syntax guidance for both `build.gradle` and `build.gradle.kts`
 
 ## ✨ Features
 
-- 🎯 **Multiple Flavor Management** - Easily configure dev, staging, production, and custom flavors
-- 📱 **Cross-Platform Support** - Automatically updates Android and iOS native files
-- 🔧 **Native File Manipulation** - Intelligent modification of AndroidManifest.xml, build.gradle/build.gradle.kts, Info.plist, and more
-- 🎨 **Format Preservation** - Maintains original indentation and structure in AndroidManifest.xml files
-- 🔥 **Firebase Integration** - Automatic provisioning file management (google-services.json, GoogleService-Info.plist)
-- 🏗️ **Clean Architecture** - Enterprise-level code quality with separation of concerns
-- 🛡️ **Safe Operations** - Automatic backup and rollback on errors
-- 📝 **YAML Configuration** - Simple, declarative configuration files
-- 🔍 **CLI Interface** - Intuitive command-line tool with helpful output
-- ✅ **Validated** - Built-in configuration validation and error handling
-- 📚 **Well Documented** - Comprehensive documentation and examples
+- **Flavor management** - Configure dev, staging, production, and custom environments
+- **Cross-platform native updates** - Apply changes to Android and iOS project files
+- **Native file processors** - Update AndroidManifest, Gradle/Gradle KTS, Info.plist, and Xcode project settings
+- **Format preservation** - Keep original AndroidManifest indentation and structure
+- **Provisioning support** - Manage `google-services.json` and `GoogleService-Info.plist`
+- **File mappings** - Copy flavor-specific files and recursive directories
+- **Atomic directory replacement** - Backup/restore-safe replacement of destination directories
+- **Safe operations** - Automatic backup and rollback on failures
+- **YAML-driven configuration** - Single declarative config for all flavors
+- **CLI workflow** - `apply`, `list`, `info`, and `validate` commands
+- **Validation and error handling** - Pre-checks for config, files, and required fields
+- **Documentation and examples** - Full example project and practical guides
 
 ## 📋 Table of Contents
 
 - [Installation](#installation)
+- [What's New (v0.1.8)](#whats-new-v018)
 - [Quick Start](#quick-start)
+- [Pub.dev Workflow](#pubdev-workflow)
 - [Configuration](#configuration)
 - [CLI Usage](#cli-usage)
 - [What Gets Modified](#what-gets-modified)
 - [Advanced Configuration](#advanced-configuration)
 - [Architecture](#architecture)
 - [Examples](#examples)
+- [Example Project Hints](#example-project-hints)
 - [API Documentation](#api-documentation)
 - [Contributing](#contributing)
 - [License](#license)
@@ -42,7 +53,7 @@ Add `flutter_flavor_orchestrator` to your `pubspec.yaml` dev dependencies:
 
 ```yaml
 dev_dependencies:
-  flutter_flavor_orchestrator: ^0.1.0
+  flutter_flavor_orchestrator: ^0.1.8
 ```
 
 Then run:
@@ -88,6 +99,9 @@ production:
 ```bash
 # From your project root
 flutter pub run flutter_flavor_orchestrator apply --flavor dev
+
+# Alternative (Dart-native invocation)
+dart run flutter_flavor_orchestrator apply --flavor dev
 ```
 
 ### 3. Build Your App
@@ -99,6 +113,32 @@ flutter build apk  # or flutter build ios
 ```
 
 That's it! Your app is now configured for the dev flavor.
+
+## Pub.dev Workflow
+
+Use this sequence when integrating the package into a real app:
+
+```bash
+# 1) Install deps
+flutter pub get
+
+# 2) Validate configuration before applying
+flutter pub run flutter_flavor_orchestrator validate
+
+# 3) Inspect available flavors
+flutter pub run flutter_flavor_orchestrator list
+
+# 4) Apply flavor
+flutter pub run flutter_flavor_orchestrator apply --flavor dev --verbose
+
+# 5) Build or run
+flutter run
+```
+
+Recommended for CI/CD:
+- Run `validate` as an early pipeline step
+- Use explicit flavor names (`dev`, `staging`, `production`) in build jobs
+- Keep flavor-specific files under `configs/`, `assets/`, and `resources/`
 
 ## ⚙️ Configuration
 
@@ -225,6 +265,11 @@ flutter_flavor_orchestrator apply --flavor production --platform ios
 flutter_flavor_orchestrator apply --flavor dev --verbose
 ```
 
+Output includes:
+- `file_mappings` count for the selected flavor
+- `replace_destination_directories` value
+- Mapping details (`destination <- source`) when `--verbose` is enabled
+
 ### List Command
 
 List all available flavors:
@@ -232,6 +277,10 @@ List all available flavors:
 ```bash
 flutter_flavor_orchestrator list
 ```
+
+Output includes, for each flavor:
+- `file_mappings` count
+- `replace_destination_directories` value
 
 ### Info Command
 
@@ -241,6 +290,11 @@ Display detailed information about a specific flavor:
 flutter_flavor_orchestrator info --flavor production
 ```
 
+Output includes:
+- Full `file_mappings` entries (`destination <- source`)
+- `replace_destination_directories` value
+- Explanation of when directory replacement applies and rollback behavior
+
 ### Validate Command
 
 Validate all flavor configurations:
@@ -248,6 +302,11 @@ Validate all flavor configurations:
 ```bash
 flutter_flavor_orchestrator validate
 ```
+
+Output includes, for each flavor:
+- `file_mappings` count
+- `replace_destination_directories` value
+- A note when directory replacement is enabled for directory mappings
 
 ### Help
 
@@ -379,6 +438,42 @@ Check out the [example](example/) directory for a complete working example with:
 - ✅ Custom metadata
 - ✅ Platform-specific configurations
 - ✅ Complete Flutter app
+- ✅ File mappings and safe directory replacement
+- ✅ Visual flavor verification in the running UI
+
+## Example Project Hints
+
+The example app is designed so you can immediately see flavor changes on screen.
+
+### Quick demo in `example/`
+
+```bash
+cd example
+flutter pub get
+
+# Apply development flavor
+flutter pub run flutter_flavor_orchestrator apply --flavor dev --verbose
+flutter run
+```
+
+Then switch flavor and run again:
+
+```bash
+flutter pub run flutter_flavor_orchestrator apply --flavor staging --verbose
+flutter run
+```
+
+What to look for in the UI:
+- Flavor-specific SVG icon
+- Environment/debug banner values
+- Color and typography preview from copied theme files
+- API/config values from copied `lib/config/app_config.dart`
+
+Useful example references:
+- Full config: [example/flavor_config.yaml](example/flavor_config.yaml)
+- File mapping assets: [example/assets/icons/README.md](example/assets/icons/README.md)
+- Theme replacement resources: [example/resources/README.md](example/resources/README.md)
+- Gradle syntax notes: [example/CUSTOM_GRADLE_CONFIG.md](example/CUSTOM_GRADLE_CONFIG.md)
 
 ## 📖 API Documentation
 

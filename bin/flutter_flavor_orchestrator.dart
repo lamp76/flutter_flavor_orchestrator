@@ -26,7 +26,30 @@ Future<void> main(List<String> arguments) async {
     );
 
   try {
-    final results = parser.parse(arguments);
+    late ArgResults results;
+    try {
+      results = parser.parse(arguments);
+    } catch (e) {
+      final errorMsg = e.toString();
+      if (errorMsg.contains('mandatory') || errorMsg.contains('required')) {
+        stderr.writeln('Error: $errorMsg');
+        stderr.writeln();
+        if (arguments.isNotEmpty && arguments.first == 'info') {
+          stderr.writeln(
+              'Usage: flutter_flavor_orchestrator info --flavor <name>');
+        } else if (arguments.isNotEmpty && arguments.first == 'apply') {
+          stderr.writeln(
+              'Usage: flutter_flavor_orchestrator apply --flavor <name>');
+        } else {
+          _printUsage(parser);
+        }
+      } else {
+        stderr.writeln('Invalid arguments: $errorMsg');
+        stderr.writeln();
+        _printUsage(parser);
+      }
+      exit(1);
+    }
 
     if (results['help'] as bool) {
       _printUsage(parser);
@@ -59,8 +82,9 @@ Future<void> main(List<String> arguments) async {
         stderr.writeln('Unknown command: ${command.name}');
         exit(1);
     }
-  } on Exception catch (e) {
-    stderr.writeln('Error: $e');
+  } catch (e) {
+    // Unexpected error that wasn't handled by command handlers
+    stderr.writeln('Unexpected error: $e');
     exit(1);
   }
 }
@@ -121,7 +145,15 @@ Future<void> _handleApplyCommand(
   ArgResults command,
   String projectRoot,
 ) async {
-  final flavor = command['flavor'] as String;
+  final flavor = command['flavor'] as String?;
+
+  if (flavor == null || flavor.isEmpty) {
+    stderr.writeln('Error: --flavor argument is required');
+    stderr.writeln();
+    stderr.writeln('Usage: flutter_flavor_orchestrator apply --flavor <name>');
+    exit(1);
+  }
+
   final platforms = command['platform'] as List<String>;
   final verbose = command['verbose'] as bool;
 
@@ -130,12 +162,19 @@ Future<void> _handleApplyCommand(
     verbose: verbose,
   );
 
-  final success = await orchestrator.applyFlavor(
-    flavor,
-    platforms: platforms,
-  );
-
-  exit(success ? 0 : 1);
+  try {
+    final success = await orchestrator.applyFlavor(
+      flavor,
+      platforms: platforms,
+    );
+    exit(success ? 0 : 1);
+  } on FormatException catch (e) {
+    stderr.writeln('Error: ${e.message}');
+    exit(1);
+  } on FileSystemException catch (e) {
+    stderr.writeln('Error: ${e.message}');
+    exit(1);
+  }
 }
 
 /// Handles the 'list' command.
@@ -150,8 +189,16 @@ Future<void> _handleListCommand(
     verbose: verbose,
   );
 
-  final flavors = await orchestrator.listFlavors();
-  exit(flavors.isNotEmpty ? 0 : 1);
+  try {
+    final flavors = await orchestrator.listFlavors();
+    exit(flavors.isNotEmpty ? 0 : 1);
+  } on FormatException catch (e) {
+    stderr.writeln('Error: ${e.message}');
+    exit(1);
+  } on FileSystemException catch (e) {
+    stderr.writeln('Error: ${e.message}');
+    exit(1);
+  }
 }
 
 /// Handles the 'info' command.
@@ -159,7 +206,15 @@ Future<void> _handleInfoCommand(
   ArgResults command,
   String projectRoot,
 ) async {
-  final flavor = command['flavor'] as String;
+  final flavor = command['flavor'] as String?;
+
+  if (flavor == null || flavor.isEmpty) {
+    stderr.writeln('Error: --flavor argument is required');
+    stderr.writeln();
+    stderr.writeln('Usage: flutter_flavor_orchestrator info --flavor <name>');
+    exit(1);
+  }
+
   final verbose = command['verbose'] as bool;
 
   final orchestrator = FlavorOrchestrator(
@@ -167,8 +222,13 @@ Future<void> _handleInfoCommand(
     verbose: verbose,
   );
 
-  await orchestrator.showFlavorInfo(flavor);
-  exit(0);
+  try {
+    await orchestrator.showFlavorInfo(flavor);
+    exit(0);
+  } on FormatException catch (e) {
+    stderr.writeln('Error: ${e.message}');
+    exit(1);
+  }
 }
 
 /// Handles the 'validate' command.
@@ -183,8 +243,13 @@ Future<void> _handleValidateCommand(
     verbose: verbose,
   );
 
-  final valid = await orchestrator.validateConfigurations();
-  exit(valid ? 0 : 1);
+  try {
+    final valid = await orchestrator.validateConfigurations();
+    exit(valid ? 0 : 1);
+  } on FormatException catch (e) {
+    stderr.writeln('Error: ${e.message}');
+    exit(1);
+  }
 }
 
 /// Prints usage information.
@@ -192,17 +257,17 @@ void _printUsage(ArgParser parser) {
   stdout.writeln('''
 Flutter Flavor Orchestrator - Build-time configuration manager
 
-A powerful CLI tool for managing Flutter flavor configurations across
-Android and iOS platforms.
+A CLI tool for managing Flutter flavor configurations across Android
+and iOS platforms, including file mappings and safe directory replacement.
 
 USAGE:
   flutter_flavor_orchestrator <command> [options]
 
 COMMANDS:
-  apply       Apply a flavor configuration to the project
-  list        List all available flavors
-  info        Display detailed information about a flavor
-  validate    Validate all flavor configurations
+  apply       Apply a flavor configuration (includes file_mappings processing)
+  list        List all available flavors with mapping/replacement summary
+  info        Display detailed flavor info, mappings, and replacement behavior
+  validate    Validate all flavor configurations and mapping-related settings
 
 GLOBAL OPTIONS:
 ${parser.usage}
@@ -220,6 +285,9 @@ EXAMPLES:
   # Show detailed flavor information
   flutter_flavor_orchestrator info --flavor staging
 
+  # Show file mapping details and replacement mode for a flavor
+  flutter_flavor_orchestrator info --flavor dev
+
   # Validate all configurations
   flutter_flavor_orchestrator validate
 
@@ -230,5 +298,5 @@ https://github.com/alessiolm/flutter_flavor_orchestrator
 
 /// Prints version information.
 void _printVersion() {
-  stdout.writeln('Flutter Flavor Orchestrator v0.1.0');
+  stdout.writeln('Flutter Flavor Orchestrator v0.1.8');
 }
