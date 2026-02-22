@@ -18,15 +18,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: dart-lang/setup-dart@v1
+      - uses: subosito/flutter-action@v2
         with:
-          sdk: ${{ matrix.sdk }}
+          channel: ${{ matrix.sdk }}
 
       - name: Install dependencies
         run: flutter pub get
 
       - name: Analyze code
-        run: flutte analyze
+        run: flutter analyze
 
       - name: Run tests
         run: flutte test --reporter=expanded
