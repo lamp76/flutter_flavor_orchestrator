@@ -592,13 +592,13 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🙏 Acknowledgments
 
-- Built with ❤️ by [Alessio La Mantia](https://github.com/alessiolm)
+- Built with ❤️ by [Alessio La Mantia](https://github.com/lamp76)
 - Inspired by the need for better flavor management in Flutter projects
 - Uses excellent packages: `args`, `yaml`, `xml`, `path`
 
 ## 📞 Support
 
-- 📧 Report issues on [GitHub Issues](https://github.com/alessiolm/flutter_flavor_orchestrator/issues)
+- 📧 Report issues on [GitHub Issues](https://github.com/lamp76/flutter_flavor_orchestrator/issues)
 - 💬 Ask questions on [Stack Overflow](https://stackoverflow.com/questions/tagged/flutter-flavor-orchestrator)
 - 📖 Read the [documentation](https://pub.dev/documentation/flutter_flavor_orchestrator/latest/)
 

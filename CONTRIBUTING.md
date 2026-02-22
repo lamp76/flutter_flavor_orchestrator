@@ -53,7 +53,7 @@ Enhancement suggestions are tracked as GitHub issues. When creating an enhanceme
 
 ```bash
 # Clone the repository
-git clone https://github.com/alessiolm/flutter_flavor_orchestrator.git
+git clone https://github.com/lamp76/flutter_flavor_orchestrator.git
 cd flutter_flavor_orchestrator
 
 # Install dependencies

@@ -346,7 +346,7 @@ EXAMPLES:
   flutter_flavor_orchestrator validate --config /secure/jenkins/flavor_config.yaml
 
 For more information, visit:
-https://github.com/alessiolm/flutter_flavor_orchestrator
+https://github.com/lamp76/flutter_flavor_orchestrator
 ''');
 }
 
