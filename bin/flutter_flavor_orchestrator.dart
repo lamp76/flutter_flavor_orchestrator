@@ -29,23 +29,27 @@ Future<void> main(List<String> arguments) async {
     late ArgResults results;
     try {
       results = parser.parse(arguments);
-    } catch (e) {
+    } on Object catch (e) {
       final errorMsg = e.toString();
       if (errorMsg.contains('mandatory') || errorMsg.contains('required')) {
-        stderr.writeln('Error: $errorMsg');
-        stderr.writeln();
+        stderr
+          ..writeln('Error: $errorMsg')
+          ..writeln();
         if (arguments.isNotEmpty && arguments.first == 'info') {
           stderr.writeln(
-              'Usage: flutter_flavor_orchestrator info --flavor <name>');
+            'Usage: flutter_flavor_orchestrator info --flavor <name>',
+          );
         } else if (arguments.isNotEmpty && arguments.first == 'apply') {
           stderr.writeln(
-              'Usage: flutter_flavor_orchestrator apply --flavor <name>');
+            'Usage: flutter_flavor_orchestrator apply --flavor <name>',
+          );
         } else {
           _printUsage(parser);
         }
       } else {
-        stderr.writeln('Invalid arguments: $errorMsg');
-        stderr.writeln();
+        stderr
+          ..writeln('Invalid arguments: $errorMsg')
+          ..writeln();
         _printUsage(parser);
       }
       exit(1);
@@ -82,7 +86,7 @@ Future<void> main(List<String> arguments) async {
         stderr.writeln('Unknown command: ${command.name}');
         exit(1);
     }
-  } catch (e) {
+  } on Object catch (e) {
     // Unexpected error that wasn't handled by command handlers
     stderr.writeln('Unexpected error: $e');
     exit(1);
@@ -148,9 +152,10 @@ Future<void> _handleApplyCommand(
   final flavor = command['flavor'] as String?;
 
   if (flavor == null || flavor.isEmpty) {
-    stderr.writeln('Error: --flavor argument is required');
-    stderr.writeln();
-    stderr.writeln('Usage: flutter_flavor_orchestrator apply --flavor <name>');
+    stderr
+      ..writeln('Error: --flavor argument is required')
+      ..writeln()
+      ..writeln('Usage: flutter_flavor_orchestrator apply --flavor <name>');
     exit(1);
   }
 
@@ -209,9 +214,10 @@ Future<void> _handleInfoCommand(
   final flavor = command['flavor'] as String?;
 
   if (flavor == null || flavor.isEmpty) {
-    stderr.writeln('Error: --flavor argument is required');
-    stderr.writeln();
-    stderr.writeln('Usage: flutter_flavor_orchestrator info --flavor <name>');
+    stderr
+      ..writeln('Error: --flavor argument is required')
+      ..writeln()
+      ..writeln('Usage: flutter_flavor_orchestrator info --flavor <name>');
     exit(1);
   }
 
