@@ -549,5 +549,60 @@ void main() {
       expect(await destNewFile2.exists(), isTrue);
       expect(await destNewFile2.readAsString(), equals('LOGO'));
     });
+
+    test('dry-run validates mapping without modifying destination file',
+        () async {
+      final sourceDir = Directory('${tempDir.path}/configs/dev');
+      await sourceDir.create(recursive: true);
+      final sourceFile = File('${sourceDir.path}/config.json');
+      await sourceFile.writeAsString('{"env": "development"}');
+
+      final destinationFile = File('${tempDir.path}/lib/config.json');
+      await destinationFile.create(recursive: true);
+      await destinationFile.writeAsString('{"env": "existing"}');
+
+      fileManager.dryRun = true;
+
+      const config = FlavorConfig(
+        name: 'dev',
+        bundleId: 'com.example.dev',
+        appName: 'App Dev',
+        fileMappings: {
+          'lib/config.json': 'configs/dev/config.json',
+        },
+      );
+
+      final result = await processor.processFileMappings(config);
+
+      expect(result, equals(1));
+      expect(
+        await destinationFile.readAsString(),
+        equals('{"env": "existing"}'),
+      );
+    });
+
+    test('dry-run allows missing destination file', () async {
+      final sourceDir = Directory('${tempDir.path}/configs/dev');
+      await sourceDir.create(recursive: true);
+      final sourceFile = File('${sourceDir.path}/config.json');
+      await sourceFile.writeAsString('{"env": "development"}');
+
+      fileManager.dryRun = true;
+
+      const config = FlavorConfig(
+        name: 'dev',
+        bundleId: 'com.example.dev',
+        appName: 'App Dev',
+        fileMappings: {
+          'lib/config.json': 'configs/dev/config.json',
+        },
+      );
+
+      final result = await processor.processFileMappings(config);
+
+      expect(result, equals(1));
+      final destinationFile = File('${tempDir.path}/lib/config.json');
+      expect(await destinationFile.exists(), isFalse);
+    });
   });
 }

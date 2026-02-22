@@ -75,13 +75,17 @@ final class FlavorOrchestrator {
   Future<bool> applyFlavor(
     String flavorName, {
     List<String> platforms = const ['android', 'ios'],
+    bool dryRun = false,
   }) async {
     try {
+      fileManager.dryRun = dryRun;
+
       logger
         ..section('Flutter Flavor Orchestrator')
         ..info('Project root: $projectRoot')
         ..info('Applying flavor: $flavorName')
-        ..info('Target platforms: ${platforms.join(', ')}');
+        ..info('Target platforms: ${platforms.join(', ')}')
+        ..info('Dry-run mode: ${dryRun ? 'enabled' : 'disabled'}');
 
       // Validate project root
       if (!await _validateProjectRoot()) {
@@ -120,14 +124,21 @@ final class FlavorOrchestrator {
       // Commit all file changes
       await fileManager.commit();
 
-      logger
-        ..section('Success')
-        ..success('Flavor "$flavorName" applied successfully!')
-        ..info('Next steps:')
-        ..info('  1. Review the changes in your native files')
-        ..info('  2. Run flutter clean')
-        ..info('  3. Run flutter pub get')
-        ..info('  4. Build your app with the new configuration');
+      if (dryRun) {
+        logger
+          ..section('Dry-run Complete')
+          ..success('Flavor "$flavorName" validated successfully!')
+          ..info('No files were changed.');
+      } else {
+        logger
+          ..section('Success')
+          ..success('Flavor "$flavorName" applied successfully!')
+          ..info('Next steps:')
+          ..info('  1. Review the changes in your native files')
+          ..info('  2. Run flutter clean')
+          ..info('  3. Run flutter pub get')
+          ..info('  4. Build your app with the new configuration');
+      }
 
       return true;
     } on Exception catch (e, stackTrace) {

@@ -164,6 +164,32 @@ final class AssetProcessor {
 
     final destDir = Directory(destinationPath);
     final destExists = await destDir.exists();
+
+    if (fileManager.dryRun) {
+      if (destExists) {
+        logger.debug(
+          '   Dry-run: destination directory exists: $relativeDestination',
+        );
+      } else {
+        logger.debug(
+          '   Dry-run: destination directory will be created: '
+          '$relativeDestination',
+        );
+      }
+
+      await for (final entity in sourceDir.list(recursive: true)) {
+        if (entity is File) {
+          filesCopied++;
+        }
+      }
+
+      logger.success(
+        '   ✓ Dry-run validated directory mapping: $filesCopied file(s)',
+      );
+
+      return filesCopied;
+    }
+
     String? backupPath;
 
     // If replace mode and destination exists, create backup

@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2026-02-22
+
+### Added
+- **Apply Dry-run Mode** - New `--dry-run` (`-d`) option for `apply` executes the full apply flow without changing files.
+- **Dry-run Destination Validation** - Dry-run now validates destination files/directories exist for write/copy operations.
+- **Dry-run Test Coverage** - Added tests for dry-run validation behavior and no-write guarantees.
+
+### Changed
+- **CLI Help and Usage** - Updated command help, examples, and version output for `0.2.0`.
+- **Documentation Refresh** - README updated with dry-run examples and behavior details.
+
 ## [0.1.9] - 2026-02-22
 
 ### Added
@@ -197,6 +208,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Detailed logging for debugging and auditing
 - Extensible architecture for future enhancements
 
+[0.2.0]: https://github.com/lamp76/flutter_flavor_orchestrator/releases/tag/v0.2.0
 [0.1.9]: https://github.com/lamp76/flutter_flavor_orchestrator/releases/tag/v0.1.9
 [0.1.8]: https://github.com/lamp76/flutter_flavor_orchestrator/releases/tag/v0.1.8
 [0.1.1]: https://github.com/lamp76/flutter_flavor_orchestrator/releases/tag/v0.1.1

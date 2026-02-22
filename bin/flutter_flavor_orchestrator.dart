@@ -117,6 +117,12 @@ ArgParser _buildApplyCommand() => ArgParser()
     help: 'Target platform(s) to process.',
   )
   ..addFlag(
+    'dry-run',
+    abbr: 'd',
+    negatable: false,
+    help: 'Execute checks without modifying files.',
+  )
+  ..addFlag(
     'verbose',
     negatable: false,
     help: 'Enable verbose debug output.',
@@ -185,6 +191,7 @@ Future<void> _handleApplyCommand(
   final platforms = command['platform'] as List<String>;
   final verbose = command['verbose'] as bool;
   final configPath = command['config'] as String?;
+  final dryRun = command['dry-run'] as bool;
 
   final orchestrator = FlavorOrchestrator(
     projectRoot: projectRoot,
@@ -196,6 +203,7 @@ Future<void> _handleApplyCommand(
     final success = await orchestrator.applyFlavor(
       flavor,
       platforms: platforms,
+      dryRun: dryRun,
     );
     exit(success ? 0 : 1);
   } on FormatException catch (e) {
@@ -319,6 +327,9 @@ EXAMPLES:
   # Apply only to Android
   flutter_flavor_orchestrator apply --flavor production --platform android
 
+  # Validate an apply run without changing files
+  flutter_flavor_orchestrator apply --flavor dev --dry-run
+
   # List available flavors
   flutter_flavor_orchestrator list
 
@@ -341,5 +352,5 @@ https://github.com/alessiolm/flutter_flavor_orchestrator
 
 /// Prints version information.
 void _printVersion() {
-  stdout.writeln('Flutter Flavor Orchestrator v0.1.9');
+  stdout.writeln('Flutter Flavor Orchestrator v0.2.0');
 }

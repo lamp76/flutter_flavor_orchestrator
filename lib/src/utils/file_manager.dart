@@ -14,6 +14,7 @@ final class FileManager {
   FileManager({
     required this.logger,
     this.createBackups = true,
+    this.dryRun = false,
   });
 
   /// Logger instance for output.
@@ -21,6 +22,12 @@ final class FileManager {
 
   /// Whether to create backups before modifying files.
   final bool createBackups;
+
+  /// Whether to execute operations in dry-run mode.
+  ///
+  /// In dry-run mode, write operations are validated but no file system
+  /// mutations are performed.
+  bool dryRun;
 
   /// Map of original file paths to their backup paths.
   final Map<String, String> _backups = {};
@@ -43,6 +50,18 @@ final class FileManager {
     }
 
     final destinationFile = File(destination);
+
+    if (dryRun) {
+      if (await destinationFile.exists()) {
+        logger.debug('Dry-run: validated file copy (destination exists)');
+      } else {
+        logger.debug(
+          'Dry-run: validated file copy (destination will be created)',
+        );
+      }
+
+      return;
+    }
 
     // Create backup if destination exists
     if (await destinationFile.exists() && createBackups) {
@@ -70,6 +89,18 @@ final class FileManager {
     logger.debug('Writing file: $filePath');
 
     final file = File(filePath);
+
+    if (dryRun) {
+      if (await file.exists()) {
+        logger.debug('Dry-run: validated file write (destination exists)');
+      } else {
+        logger.debug(
+          'Dry-run: validated file write (destination will be created)',
+        );
+      }
+
+      return;
+    }
 
     // Create backup if file exists
     if (await file.exists() && createBackups) {
@@ -116,6 +147,12 @@ final class FileManager {
   ///
   /// Restores all backed-up files to their original locations.
   Future<void> rollback() async {
+    if (dryRun) {
+      logger.debug('Dry-run: rollback skipped');
+      _backups.clear();
+      return;
+    }
+
     logger.warning('Rolling back changes...');
 
     for (final entry in _backups.entries) {
@@ -142,6 +179,12 @@ final class FileManager {
   ///
   /// This should be called after successfully completing all operations.
   Future<void> commit() async {
+    if (dryRun) {
+      logger.debug('Dry-run: commit skipped');
+      _backups.clear();
+      return;
+    }
+
     logger.debug('Committing changes...');
 
     for (final backupPath in _backups.values) {
@@ -175,6 +218,17 @@ final class FileManager {
   /// Ensures a directory exists at [dirPath], creating it if necessary.
   Future<void> ensureDirectory(String dirPath) async {
     final dir = Directory(dirPath);
+
+    if (dryRun) {
+      if (await dir.exists()) {
+        logger.debug('Dry-run: validated directory exists: $dirPath');
+      } else {
+        logger.debug('Dry-run: directory will be created: $dirPath');
+      }
+
+      return;
+    }
+
     if (!await dir.exists()) {
       await dir.create(recursive: true);
       logger.debug('Created directory: $dirPath');

@@ -8,7 +8,13 @@
 
 Build-time orchestration for Flutter flavors across Android and iOS. Configure environment-specific app identity, native metadata, provisioning files, and resource mappings from a single YAML source.
 
-## What's New (v0.1.9)
+## What's New (v0.2.0)
+
+- **Dry-run Apply Mode (`--dry-run`)** - Execute full apply processing without changing files
+- **Destination Presence Validation** - Dry-run validates destination files/directories exist for every write/copy path
+- **Safer Preflight for CI/CD** - Validate flavor application end-to-end before running a real apply
+
+## Previous: What's New (v0.1.9)
 
 - **External YAML Config Path (`--config`)** - Load flavor configuration from a YAML file outside project root (absolute or relative path)
 - **CI/CD Friendly Workflow** - Keep production config outside repository and inject it at runtime (for example Jenkins)
@@ -33,7 +39,8 @@ Build-time orchestration for Flutter flavors across Android and iOS. Configure e
 ## 📋 Table of Contents
 
 - [Installation](#installation)
-- [What's New (v0.1.9)](#whats-new-v019)
+- [What's New (v0.2.0)](#whats-new-v020)
+- [Previous: What's New (v0.1.9)](#previous-whats-new-v019)
 - [Quick Start](#quick-start)
 - [Pub.dev Workflow](#pubdev-workflow)
 - [Configuration](#configuration)
@@ -53,7 +60,7 @@ Add `flutter_flavor_orchestrator` to your `pubspec.yaml` dev dependencies:
 
 ```yaml
 dev_dependencies:
-  flutter_flavor_orchestrator: ^0.1.9
+  flutter_flavor_orchestrator: ^0.2.0
 ```
 
 Then run:
@@ -270,6 +277,9 @@ flutter_flavor_orchestrator apply --flavor production --config /secure/jenkins/f
 # Apply to Android only
 flutter_flavor_orchestrator apply --flavor staging --platform android
 
+# Dry-run apply (execute checks without changing files)
+flutter_flavor_orchestrator apply --flavor dev --dry-run
+
 # Apply to iOS only
 flutter_flavor_orchestrator apply --flavor production --platform ios
 
@@ -281,6 +291,7 @@ Output includes:
 - `file_mappings` count for the selected flavor
 - `replace_destination_directories` value
 - Mapping details (`destination <- source`) when `--verbose` is enabled
+- In `--dry-run`, all operations are validated and no files are modified
 
 ### List Command
 
