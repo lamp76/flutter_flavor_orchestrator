@@ -1,6 +1,9 @@
 import 'dart:io';
 import 'package:path/path.dart' as path;
+import '../models/execution_plan.dart';
 import '../models/flavor_config.dart';
+import '../models/operation_kind.dart';
+import '../models/planned_operation.dart';
 import '../utils/file_manager.dart';
 import '../utils/logger.dart';
 
@@ -30,6 +33,65 @@ final class AssetProcessor {
 
   /// Logger instance for output.
   final Logger logger;
+
+  /// Builds an ordered list of [PlannedOperation]s for the file mappings
+  /// in [config] without executing any file system operations.
+  ///
+  /// This is the shared planning phase used by both `apply` (which then
+  /// executes the plan) and the future `plan` command (which only previews).
+  ///
+  /// Returns a list of [PlannedOperation]s describing what would be done.
+  Future<List<PlannedOperation>> planFileMappings(
+    FlavorConfig config,
+  ) async {
+    final operations = <PlannedOperation>[];
+
+    for (final entry in config.fileMappings.entries) {
+      final destination = entry.key;
+      final source = entry.value;
+
+      final sourcePath = path.join(projectRoot, source);
+
+      final sourceEntity = _getFileSystemEntity(sourcePath);
+
+      if (sourceEntity == null) {
+        operations.add(
+          PlannedOperation(
+            kind: OperationKind.skip,
+            description: 'Skip missing source: $source',
+            sourcePath: source,
+            destinationPath: destination,
+            platform: ExecutionPlan.platformAssets,
+          ),
+        );
+        continue;
+      }
+
+      if (sourceEntity is File) {
+        operations.add(
+          PlannedOperation(
+            kind: OperationKind.copyFile,
+            description: 'Copy file: $source → $destination',
+            sourcePath: source,
+            destinationPath: destination,
+            platform: ExecutionPlan.platformAssets,
+          ),
+        );
+      } else if (sourceEntity is Directory) {
+        operations.add(
+          PlannedOperation(
+            kind: OperationKind.copyDirectory,
+            description: 'Copy directory: $source/ → $destination/',
+            sourcePath: source,
+            destinationPath: destination,
+            platform: ExecutionPlan.platformAssets,
+          ),
+        );
+      }
+    }
+
+    return operations;
+  }
 
   /// Processes file mappings for the given flavor configuration.
   ///

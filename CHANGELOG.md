@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-02-22
+
+### Added
+- **Typed Operation Models** - New immutable models provide a structured representation of every step the orchestrator performs:
+  - `OperationKind` enum — four operation types: `copyFile`, `copyDirectory`, `writeFile`, `skip`.
+  - `PlannedOperation` — describes a single step (kind, description, source/destination paths, platform). Serialisable via `toJson()`.
+  - `ExecutionPlan` — ordered collection of `PlannedOperation`s for a flavor apply, with computed counts (`totalOperations`, `activeOperations`, `skippedOperations`) and `toJson()` for machine-readable output. Includes static platform constants (`platformAndroid`, `platformIos`, `platformAssets`).
+- **Shared Planning Refactor** - `FlavorOrchestrator` now builds an `ExecutionPlan` as an internal planning phase before executing operations, via the new private `_buildExecutionPlan()` method. This is the foundation reused by both `apply` and the upcoming `plan` command (`v0.4.0`).
+- **`AssetProcessor.planFileMappings()`** - New method generates a `List<PlannedOperation>` describing file-mapping operations without touching the file system. Used by `_buildExecutionPlan()` and available for future preview commands.
+- **Exported Models** - `ExecutionPlan`, `PlannedOperation`, and `OperationKind` are now part of the public library API.
+- **Test Coverage** - New `test/models/execution_plan_test.dart` covers:
+  - `OperationKind` enum values and names
+  - `PlannedOperation` construction, `toJson()` serialization, and null-omission
+  - `ExecutionPlan` counts, `forPlatform()` filtering, `toJson()` shape
+  - `AssetProcessor.planFileMappings()` for file, directory, and missing-source scenarios, including a no-mutation guarantee
+
+### Changed
+- **`FlavorOrchestrator.applyFlavor()`** - Now calls `_buildExecutionPlan()` at the start of each apply run and logs active/skipped operation counts at debug level. Execution behavior is unchanged.
+- **Documentation** - README updated with v0.3.0 highlights and architecture description.
+
 ## [0.2.0] - 2026-02-22
 
 ### Added
@@ -208,6 +228,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Detailed logging for debugging and auditing
 - Extensible architecture for future enhancements
 
+[0.3.0]: https://github.com/lamp76/flutter_flavor_orchestrator/releases/tag/v0.3.0
 [0.2.0]: https://github.com/lamp76/flutter_flavor_orchestrator/releases/tag/v0.2.0
 [0.1.9]: https://github.com/lamp76/flutter_flavor_orchestrator/releases/tag/v0.1.9
 [0.1.8]: https://github.com/lamp76/flutter_flavor_orchestrator/releases/tag/v0.1.8

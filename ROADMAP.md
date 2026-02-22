@@ -12,9 +12,24 @@ Each item includes:
 
 ## Package-version roadmap
 
-### `v0.3.0` (planning foundation)
-- Shared operation planning refactor used by both `apply` and future `plan`.
-- Internal typed command result models (foundation for structured output).
+### ✅ `v0.1.x` (released)
+- Initial CLI (`apply`, `list`, `info`, `validate`), YAML config parser.
+- Android processor (AndroidManifest, Gradle/Gradle KTS, google-services.json).
+- iOS processor (Info.plist, Xcode project, GoogleService-Info.plist).
+- File mappings (`file_mappings`) with recursive directory copy and atomic replacement.
+- `FileManager` backup/rollback, dry-run apply (`--dry-run`), external config path (`--config`).
+
+### ✅ `v0.2.0` (released)
+- Dry-run apply mode with destination-presence validation.
+- CLI help and usage updates.
+
+### ✅ `v0.3.0` (done — planning foundation)
+- **`OperationKind`** enum — typed operation kinds (`copyFile`, `copyDirectory`, `writeFile`, `skip`).
+- **`PlannedOperation`** — immutable descriptor for a single orchestration step with `toJson()`.
+- **`ExecutionPlan`** — ordered collection of `PlannedOperation`s with metadata, counts, and `toJson()`.
+- **`AssetProcessor.planFileMappings()`** — generates operations without executing (shared planning phase).
+- **`FlavorOrchestrator._buildExecutionPlan()`** — internal method called by `apply` and reused by future `plan` command.
+- All three models exported as public API.
 
 ### `v0.4.0` (preview release)
 - Feature 1: `plan` command (text output first).
@@ -68,9 +83,9 @@ Gives users confidence before mutating project files and reduces accidental misc
 1. Update `bin/flutter_flavor_orchestrator.dart`:
    - Add `_buildPlanCommand()` with options: `--flavor`, `--config`, `--platform`, `--verbose`, `--output` (`text|json`).
    - Register the command in `ArgParser` and `switch` dispatch.
-2. In orchestrator layer (`lib/src/orchestrator.dart`), add `planFlavor(...)` returning an immutable model (e.g. `ExecutionPlan`).
-3. Refactor existing `apply` internals so file-resolution + operation-generation is shared between `applyFlavor` and `planFlavor`.
-4. Add serialization helpers for JSON output.
+2. In orchestrator layer (`lib/src/orchestrator.dart`), add `planFlavor(...)` returning `ExecutionPlan` (model already exists from v0.3.0).
+3. Reuse `_buildExecutionPlan()` (already refactored in v0.3.0) for `planFlavor`.
+4. Add text and JSON output rendering using the `ExecutionPlan.toJson()` already available.
 5. Add tests:
    - command parsing
    - generated operation list order
@@ -253,7 +268,7 @@ Speeds onboarding and reduces initial configuration mistakes.
 
 ## Recommended implementation order
 
-1. Shared operation planning refactor (foundation for `plan`, safety checks, backups)
+1. ✅ Shared operation planning refactor (foundation for `plan`, safety checks, backups) — **done in v0.3.0**
 2. `plan` command
 3. Backup + `rollback`
 4. Output formatter abstraction + JSON output
@@ -275,3 +290,4 @@ Speeds onboarding and reduces initial configuration mistakes.
 - CI pipeline updated to run new commands and validate expected outputs.
 - All new features behind a `1.0.0` release tag with appropriate version bump in `pubspec.yaml`.
 - Documentation updated to reflect new capabilities and usage patterns.
+

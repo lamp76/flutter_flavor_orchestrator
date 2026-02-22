@@ -352,5 +352,5 @@ https://github.com/lamp76/flutter_flavor_orchestrator
 
 /// Prints version information.
 void _printVersion() {
-  stdout.writeln('Flutter Flavor Orchestrator v0.2.0');
+  stdout.writeln('Flutter Flavor Orchestrator v0.3.0');
 }

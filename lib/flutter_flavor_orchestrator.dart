@@ -10,7 +10,10 @@
 library;
 
 export 'src/config_parser.dart';
+export 'src/models/execution_plan.dart';
 export 'src/models/flavor_config.dart';
+export 'src/models/operation_kind.dart';
+export 'src/models/planned_operation.dart';
 export 'src/models/provisioning_config.dart';
 export 'src/orchestrator.dart';
 export 'src/processors/android_processor.dart';
