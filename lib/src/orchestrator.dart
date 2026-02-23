@@ -1,6 +1,9 @@
 import 'dart:io';
 import 'config_parser.dart';
+import 'models/execution_plan.dart';
 import 'models/flavor_config.dart';
+import 'models/operation_kind.dart';
+import 'models/planned_operation.dart';
 import 'processors/android_processor.dart';
 import 'processors/asset_processor.dart';
 import 'processors/ios_processor.dart';
@@ -105,6 +108,13 @@ final class FlavorOrchestrator {
         ..debug('App Name: ${config.appName}');
 
       _printFileMappingSummary(config);
+
+      // Build execution plan (shared foundation for apply and future plan cmd)
+      final plan = await _buildExecutionPlan(config, platforms);
+      logger.debug(
+        'Execution plan: ${plan.activeOperations} active, '
+        '${plan.skippedOperations} skipped',
+      );
 
       // Process platforms
       final processAndroid = platforms.contains('android');
@@ -423,5 +433,98 @@ final class FlavorOrchestrator {
         'entries in file_mappings',
       );
     }
+  }
+
+  /// Builds an [ExecutionPlan] for [config] and [platforms] without
+  /// executing any file system operations.
+  ///
+  /// This shared planning phase is the foundation for both the `apply`
+  /// command (which executes the plan) and the future `plan` command
+  /// (which only previews operations).
+  ///
+  /// Platform-level operations (Android / iOS native file updates) are
+  /// included as high-level descriptors; detailed sub-operations are
+  /// resolved by the individual processors at execution time.
+  Future<ExecutionPlan> _buildExecutionPlan(
+    FlavorConfig config,
+    List<String> platforms,
+  ) async {
+    final operations = <PlannedOperation>[];
+
+    if (platforms.contains('android')) {
+      operations.addAll(_buildAndroidOperations(config));
+    }
+
+    if (platforms.contains('ios')) {
+      operations.addAll(_buildIosOperations(config));
+    }
+
+    // File-mapping operations (shared asset processor planning)
+    final assetOps = await assetProcessor.planFileMappings(config);
+    operations.addAll(assetOps);
+
+    return ExecutionPlan(
+      flavorName: config.name,
+      operations: operations,
+      platforms: platforms,
+    );
+  }
+
+  /// Returns high-level [PlannedOperation]s for Android native file updates.
+  List<PlannedOperation> _buildAndroidOperations(FlavorConfig config) {
+    final ops = <PlannedOperation>[
+      const PlannedOperation(
+        kind: OperationKind.writeFile,
+        description: 'Update AndroidManifest.xml',
+        destinationPath: 'android/app/src/main/AndroidManifest.xml',
+        platform: ExecutionPlan.platformAndroid,
+      ),
+      const PlannedOperation(
+        kind: OperationKind.writeFile,
+        description: 'Update build.gradle / build.gradle.kts',
+        destinationPath: 'android/app/build.gradle',
+        platform: ExecutionPlan.platformAndroid,
+      ),
+    ];
+
+    if (config.provisioning?.androidGoogleServicesPath != null) {
+      ops.add(
+        PlannedOperation(
+          kind: OperationKind.copyFile,
+          description: 'Copy google-services.json',
+          sourcePath: config.provisioning!.androidGoogleServicesPath,
+          destinationPath: 'android/app/google-services.json',
+          platform: ExecutionPlan.platformAndroid,
+        ),
+      );
+    }
+
+    return ops;
+  }
+
+  /// Returns high-level [PlannedOperation]s for iOS native file updates.
+  List<PlannedOperation> _buildIosOperations(FlavorConfig config) {
+    final ops = <PlannedOperation>[
+      const PlannedOperation(
+        kind: OperationKind.writeFile,
+        description: 'Update Info.plist',
+        destinationPath: 'ios/Runner/Info.plist',
+        platform: ExecutionPlan.platformIos,
+      ),
+    ];
+
+    if (config.provisioning?.iosGoogleServicePath != null) {
+      ops.add(
+        PlannedOperation(
+          kind: OperationKind.copyFile,
+          description: 'Copy GoogleService-Info.plist',
+          sourcePath: config.provisioning!.iosGoogleServicePath,
+          destinationPath: 'ios/Runner/GoogleService-Info.plist',
+          platform: ExecutionPlan.platformIos,
+        ),
+      );
+    }
+
+    return ops;
   }
 }

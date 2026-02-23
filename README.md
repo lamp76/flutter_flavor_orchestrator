@@ -12,18 +12,17 @@
 
 Build-time orchestration for Flutter flavors across Android and iOS. Configure environment-specific app identity, native metadata, provisioning files, and resource mappings from a single YAML source.
 
-## What's New (v0.2.0)
+## What's New (v0.3.0)
+
+- **Typed Operation Models** — `OperationKind`, `PlannedOperation`, `ExecutionPlan` added as public API; each operation is now a first-class immutable value with `toJson()` support
+- **Shared Planning Foundation** — `FlavorOrchestrator` builds an `ExecutionPlan` before executing any apply; lays the groundwork for the upcoming `plan` command
+- **`AssetProcessor.planFileMappings()`** — generate file-mapping operations without touching the file system (preview without side-effects)
+
+## Previous: What's New (v0.2.0)
 
 - **Dry-run Apply Mode (`--dry-run`)** - Execute full apply processing without changing files
 - **Destination Presence Validation** - Dry-run validates destination files/directories exist for every write/copy path
 - **Safer Preflight for CI/CD** - Validate flavor application end-to-end before running a real apply
-
-## Previous: What's New (v0.1.9)
-
-- **External YAML Config Path (`--config`)** - Load flavor configuration from a YAML file outside project root (absolute or relative path)
-- **CI/CD Friendly Workflow** - Keep production config outside repository and inject it at runtime (for example Jenkins)
-- **Programmatic Config Path Support** - `FlavorOrchestrator` supports `configPath` for explicit external configuration loading
-- **Backward-Compatible Fallback** - Existing `flavor_config.yaml` / `pubspec.yaml` behavior remains unchanged when `--config` is not provided
 
 ## ✨ Features
 
@@ -36,6 +35,7 @@ Build-time orchestration for Flutter flavors across Android and iOS. Configure e
 - **Atomic directory replacement** - Backup/restore-safe replacement of destination directories
 - **Safe operations** - Automatic backup and rollback on failures
 - **YAML-driven configuration** - Single declarative config for all flavors
+- **Typed execution plan** - `ExecutionPlan`, `PlannedOperation`, `OperationKind` models with `toJson()` (foundation for the upcoming `plan` command)
 - **CLI workflow** - `apply`, `list`, `info`, and `validate` commands
 - **Validation and error handling** - Pre-checks for config, files, and required fields
 - **Documentation and examples** - Full example project and practical guides
@@ -43,8 +43,8 @@ Build-time orchestration for Flutter flavors across Android and iOS. Configure e
 ## 📋 Table of Contents
 
 - [Installation](#installation)
-- [What's New (v0.2.0)](#whats-new-v020)
-- [Previous: What's New (v0.1.9)](#previous-whats-new-v019)
+- [What's New (v0.3.0)](#whats-new-v030)
+- [Previous: What's New (v0.2.0)](#previous-whats-new-v020)
 - [Quick Start](#quick-start)
 - [Pub.dev Workflow](#pubdev-workflow)
 - [Configuration](#configuration)
@@ -56,6 +56,7 @@ Build-time orchestration for Flutter flavors across Android and iOS. Configure e
 - [Example Project Hints](#example-project-hints)
 - [API Documentation](#api-documentation)
 - [Contributing](#contributing)
+- [Roadmap](#️-roadmap)
 - [License](#license)
 
 ## 🚀 Installation
@@ -64,7 +65,7 @@ Add `flutter_flavor_orchestrator` to your `pubspec.yaml` dev dependencies:
 
 ```yaml
 dev_dependencies:
-  flutter_flavor_orchestrator: ^0.2.0
+  flutter_flavor_orchestrator: ^0.3.0
 ```
 
 Then run:
@@ -444,25 +445,31 @@ The package follows Clean Architecture principles:
 lib/
 ├── src/
 │   ├── models/              # Data models
+│   │   ├── execution_plan.dart      # Ordered plan of PlannedOperations (v0.3.0)
 │   │   ├── flavor_config.dart
+│   │   ├── operation_kind.dart      # OperationKind enum (v0.3.0)
+│   │   ├── planned_operation.dart   # Single step descriptor (v0.3.0)
 │   │   └── provisioning_config.dart
 │   ├── processors/          # Platform processors
 │   │   ├── android_processor.dart
+│   │   ├── asset_processor.dart     # planFileMappings() added (v0.3.0)
 │   │   └── ios_processor.dart
 │   ├── utils/              # Utilities
 │   │   ├── file_manager.dart
 │   │   └── logger.dart
 │   ├── config_parser.dart  # Configuration parsing
-│   └── orchestrator.dart   # Main orchestrator
+│   └── orchestrator.dart   # Main orchestrator (_buildExecutionPlan, v0.3.0)
 └── flutter_flavor_orchestrator.dart  # Public API
 ```
 
 ### Key Components
 
-- **FlavorOrchestrator**: Coordinates the entire process
+- **FlavorOrchestrator**: Coordinates the entire process; builds an `ExecutionPlan` before applying
 - **ConfigParser**: Parses and validates YAML configurations
 - **AndroidProcessor**: Handles Android-specific modifications
 - **IosProcessor**: Handles iOS-specific modifications
+- **AssetProcessor**: Handles file-mapping copy and planning operations
+- **ExecutionPlan / PlannedOperation / OperationKind**: Typed, immutable operation models with JSON serialisation
 - **FileManager**: Provides safe file operations with backup/rollback
 
 ## 📚 Examples
@@ -545,6 +552,9 @@ void main() async {
 
 - **FlavorConfig**: Represents a complete flavor configuration
 - **ProvisioningConfig**: Provisioning file configuration
+- **ExecutionPlan**: Ordered list of `PlannedOperation`s for a flavor; serialisable via `toJson()`
+- **PlannedOperation**: Immutable descriptor of a single orchestration step with kind, paths, and platform
+- **OperationKind**: Enum — `copyFile`, `copyDirectory`, `writeFile`, `skip`
 - **ConfigParser**: Configuration parsing and validation
 - **FlavorOrchestrator**: Main orchestration logic
 
@@ -608,13 +618,28 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🗺️ Roadmap
 
-- [ ] Support for additional platforms (macOS, Windows, Linux)
-- [ ] Icon generation integration
-- [ ] Enhanced scheme management for iOS
-- [ ] Build flavor integration with flutter build commands
-- [ ] Interactive CLI mode
-- [ ] Configuration templates
-- [ ] Migration tools from other flavor solutions
+The full roadmap is in [ROADMAP.md](ROADMAP.md). Here is a compact summary of progress and upcoming milestones toward the `v1.0.0` stable release.
+
+### Released
+
+| Version | Highlights |
+|---------|-----------|
+| **v0.1.x** | Initial CLI (`apply`, `list`, `info`, `validate`), Android/iOS processors, file mappings, dry-run, external config path |
+| **v0.2.0** | Dry-run destination-presence validation, safer CI preflight |
+| **v0.3.0** ✅ | `OperationKind`, `PlannedOperation`, `ExecutionPlan` typed models · shared `_buildExecutionPlan()` in orchestrator · `AssetProcessor.planFileMappings()` |
+
+### Upcoming
+
+| Version | Theme | Key deliverable |
+|---------|-------|----------------|
+| **v0.4.0** | Preview | `plan` command — preview operations without mutating files; reuses `ExecutionPlan` from v0.3.0 |
+| **v0.5.0** | Safety | `rollback` command + timestamped backup before every non-dry-run apply |
+| **v0.6.0** | Conflict protection | Duplicate-target detection and `--force` guardrails |
+| **v0.7.0** | Automation contract | `--output json` for all commands; standardised exit codes |
+| **v0.8.0** | Schema hardening | `schema_version` enforcement, `validate --strict`, migration scaffold |
+| **v0.9.0** | Diagnostics | `doctor` command with categorised findings (error/warning/info) |
+| **v1.0.0** | Stable | Production-ready `doctor`, docs freeze, no breaking changes without migration path |
+| **v1.1.0** | Post-1.0 | Env-var interpolation (`${VAR:-default}`), `init` command |
 
 ---
 
