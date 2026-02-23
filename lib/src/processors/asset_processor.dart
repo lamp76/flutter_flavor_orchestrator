@@ -102,6 +102,7 @@ final class AssetProcessor {
   ///
   /// Throws [FileSystemException] if any operation fails.
   Future<int> processFileMappings(FlavorConfig config) async {
+    logger.section('Processing file mappings for flavor: ${config.name}');
     if (config.fileMappings.isEmpty) {
       logger.debug('No file mappings defined for flavor: ${config.name}');
       return 0;
