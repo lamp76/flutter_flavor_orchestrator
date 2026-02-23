@@ -235,7 +235,7 @@ void main() {
       expect(json['total_operations'], equals(1));
       expect(json['active_operations'], equals(1));
       expect(json['skipped_operations'], equals(0));
-      expect(json['operations'], isA<List>());
+      expect(json['operations'], isA<List<Map<String, Object?>>>());
       expect(json['operations'], hasLength(1));
     });
 
@@ -338,8 +338,7 @@ void main() {
 
     test('returns copyDirectory operation for existing directory source',
         () async {
-      final sourceDir =
-          await Directory('${tempDir.path}/assets/icons').create(
+      final sourceDir = await Directory('${tempDir.path}/assets/icons').create(
         recursive: true,
       );
       await File('${sourceDir.path}/icon.png').writeAsString('PNG');
@@ -400,11 +399,11 @@ void main() {
       final src2 = File('${tempDir.path}/b.dart');
       await src2.writeAsString('b');
 
-      final config = FlavorConfig(
+      const config = FlavorConfig(
         name: 'dev',
         bundleId: 'com.example.dev',
         appName: 'App Dev',
-        fileMappings: const {
+        fileMappings: {
           'lib/a.dart': 'a.dart',
           'lib/b.dart': 'b.dart',
         },

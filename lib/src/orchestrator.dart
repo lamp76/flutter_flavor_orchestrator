@@ -492,7 +492,7 @@ final class FlavorOrchestrator {
         PlannedOperation(
           kind: OperationKind.copyFile,
           description: 'Copy google-services.json',
-          sourcePath: config.provisioning!.androidGoogleServicesPath!,
+          sourcePath: config.provisioning!.androidGoogleServicesPath,
           destinationPath: 'android/app/google-services.json',
           platform: ExecutionPlan.platformAndroid,
         ),
@@ -518,7 +518,7 @@ final class FlavorOrchestrator {
         PlannedOperation(
           kind: OperationKind.copyFile,
           description: 'Copy GoogleService-Info.plist',
-          sourcePath: config.provisioning!.iosGoogleServicePath!,
+          sourcePath: config.provisioning!.iosGoogleServicePath,
           destinationPath: 'ios/Runner/GoogleService-Info.plist',
           platform: ExecutionPlan.platformIos,
         ),
