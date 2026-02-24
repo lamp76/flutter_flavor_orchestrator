@@ -31,9 +31,11 @@ Each item includes:
 - **`FlavorOrchestrator._buildExecutionPlan()`** — internal method called by `apply` and reused by future `plan` command.
 - All three models exported as public API.
 
-### `v0.4.0` (preview release)
+### ✅ `v0.4.0` (preview release)
 - Feature 1: `plan` command (text output first).
 - Baseline operation summaries per platform and flavor.
+- `FlavorOrchestrator.planFlavor()` public method returning `ExecutionPlan` without executing.
+- `--output json` for machine-readable plan output.
 
 ### `v0.5.0` (safety release)
 - Feature 2: automatic backup before non-dry-run `apply`.
@@ -269,7 +271,7 @@ Speeds onboarding and reduces initial configuration mistakes.
 ## Recommended implementation order
 
 1. ✅ Shared operation planning refactor (foundation for `plan`, safety checks, backups) — **done in v0.3.0**
-2. `plan` command
+2. ✅ `plan` command — **done in v0.4.0**
 3. Backup + `rollback`
 4. Output formatter abstraction + JSON output
 5. Schema versioning + strict validation

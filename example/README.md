@@ -12,6 +12,7 @@ This example demonstrates how to use the `flutter_flavor_orchestrator` package t
 - ✅ Custom Gradle and Info.plist entries
 - ✅ Flavor-specific assets
 - ✅ External YAML config loading with `--config` (CI/CD friendly)
+- ✅ Plan preview with `plan --flavor <name>` (no file mutations)
 
 ## Project Structure
 
@@ -70,7 +71,19 @@ Apply production flavor to iOS only:
 flutter_flavor_orchestrator apply --flavor production --platform ios
 ```
 
-### 4. Validate Configurations
+### 4. Preview Operations (Plan)
+
+Preview what would be applied without mutating any files:
+```bash
+flutter_flavor_orchestrator plan --flavor dev
+```
+
+Or get machine-readable JSON output:
+```bash
+flutter_flavor_orchestrator plan --flavor dev --output json
+```
+
+### 5. Validate Configurations
 
 ```bash
 flutter_flavor_orchestrator validate

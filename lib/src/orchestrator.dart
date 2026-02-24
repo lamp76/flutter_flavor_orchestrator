@@ -435,11 +435,32 @@ final class FlavorOrchestrator {
     }
   }
 
+  /// Returns an [ExecutionPlan] describing the operations that would be
+  /// performed to apply [flavorName] without mutating any files.
+  ///
+  /// [flavorName] is the name of the flavor to preview.
+  /// [platforms] specifies which platforms to include in the plan
+  /// ('android', 'ios', or both).
+  ///
+  /// The plan is built from the same pipeline used by [applyFlavor], so the
+  /// output is guaranteed to match what a real apply would execute.
+  Future<ExecutionPlan> planFlavor(
+    String flavorName, {
+    List<String> platforms = const ['android', 'ios'],
+  }) async {
+    final config = await configParser.parseFlavorConfig(
+      projectRoot,
+      flavorName,
+      configPath: configPath,
+    );
+    return _buildExecutionPlan(config, platforms);
+  }
+
   /// Builds an [ExecutionPlan] for [config] and [platforms] without
   /// executing any file system operations.
   ///
   /// This shared planning phase is the foundation for both the `apply`
-  /// command (which executes the plan) and the future `plan` command
+  /// command (which executes the plan) and the `plan` command
   /// (which only previews operations).
   ///
   /// Platform-level operations (Android / iOS native file updates) are

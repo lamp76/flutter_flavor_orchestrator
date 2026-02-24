@@ -12,10 +12,16 @@
 
 Build-time orchestration for Flutter flavors across Android and iOS. Configure environment-specific app identity, native metadata, provisioning files, and resource mappings from a single YAML source.
 
-## What's New (v0.3.0)
+## What's New (v0.4.0)
+
+- **`plan` command** — Preview operations without mutating files: `flutter_flavor_orchestrator plan --flavor dev`
+- **`--output json`** — Machine-readable plan output: `plan --flavor dev --output json`
+- **`FlavorOrchestrator.planFlavor()`** — New public method returning an `ExecutionPlan` without executing it
+
+## Previous: What's New (v0.3.0)
 
 - **Typed Operation Models** — `OperationKind`, `PlannedOperation`, `ExecutionPlan` added as public API; each operation is now a first-class immutable value with `toJson()` support
-- **Shared Planning Foundation** — `FlavorOrchestrator` builds an `ExecutionPlan` before executing any apply; lays the groundwork for the upcoming `plan` command
+- **Shared Planning Foundation** — `FlavorOrchestrator` builds an `ExecutionPlan` before executing any apply; now exposed publicly via `planFlavor()` for the `plan` command
 - **`AssetProcessor.planFileMappings()`** — generate file-mapping operations without touching the file system (preview without side-effects)
 
 ## Previous: What's New (v0.2.0)
@@ -35,16 +41,17 @@ Build-time orchestration for Flutter flavors across Android and iOS. Configure e
 - **Atomic directory replacement** - Backup/restore-safe replacement of destination directories
 - **Safe operations** - Automatic backup and rollback on failures
 - **YAML-driven configuration** - Single declarative config for all flavors
-- **Typed execution plan** - `ExecutionPlan`, `PlannedOperation`, `OperationKind` models with `toJson()` (foundation for the upcoming `plan` command)
-- **CLI workflow** - `apply`, `list`, `info`, and `validate` commands
+- **Typed execution plan** - `ExecutionPlan`, `PlannedOperation`, `OperationKind` models with `toJson()`
+- **CLI workflow** - `apply`, `plan`, `list`, `info`, and `validate` commands
+- **`plan` command** — Preview operations without file mutations; text and JSON output
 - **Validation and error handling** - Pre-checks for config, files, and required fields
 - **Documentation and examples** - Full example project and practical guides
 
 ## 📋 Table of Contents
 
 - [Installation](#installation)
-- [What's New (v0.3.0)](#whats-new-v030)
-- [Previous: What's New (v0.2.0)](#previous-whats-new-v020)
+- [What's New (v0.4.0)](#whats-new-v040)
+- [Previous: What's New (v0.3.0)](#previous-whats-new-v030)
 - [Quick Start](#quick-start)
 - [Pub.dev Workflow](#pubdev-workflow)
 - [Configuration](#configuration)
@@ -65,7 +72,7 @@ Add `flutter_flavor_orchestrator` to your `pubspec.yaml` dev dependencies:
 
 ```yaml
 dev_dependencies:
-  flutter_flavor_orchestrator: ^0.3.0
+  flutter_flavor_orchestrator: ^0.4.0
 ```
 
 Then run:
@@ -298,6 +305,32 @@ Output includes:
 - Mapping details (`destination <- source`) when `--verbose` is enabled
 - In `--dry-run`, all operations are validated and no files are modified
 
+### Plan Command
+
+Preview the operations that would be performed for a flavor, **without mutating any files**:
+
+```bash
+# Preview both platforms (text output)
+flutter_flavor_orchestrator plan --flavor dev
+
+# Preview as machine-readable JSON
+flutter_flavor_orchestrator plan --flavor dev --output json
+
+# Preview Android-only plan
+flutter_flavor_orchestrator plan --flavor staging --platform android
+
+# Preview from an external YAML config
+flutter_flavor_orchestrator plan --flavor production --config /secure/jenkins/flavor_config.yaml
+```
+
+Output includes a per-platform section listing each operation with its kind (`copyFile`, `copyDirectory`, `writeFile`, `skip`), description, and source/destination paths.
+
+JSON output (`--output json`) returns the serialised `ExecutionPlan` with stable top-level keys:
+- `flavor` — flavor name
+- `platforms` — target platforms
+- `total_operations`, `active_operations`, `skipped_operations` — operation counts
+- `operations` — ordered list of operation objects
+
 ### List Command
 
 List all available flavors:
@@ -458,7 +491,7 @@ lib/
 │   │   ├── file_manager.dart
 │   │   └── logger.dart
 │   ├── config_parser.dart  # Configuration parsing
-│   └── orchestrator.dart   # Main orchestrator (_buildExecutionPlan, v0.3.0)
+│   └── orchestrator.dart   # Main orchestrator (_buildExecutionPlan, planFlavor, v0.4.0)
 └── flutter_flavor_orchestrator.dart  # Public API
 ```
 
@@ -536,6 +569,12 @@ void main() async {
 
   // Apply a flavor
   final success = await orchestrator.applyFlavor(
+    'dev',
+    platforms: ['android', 'ios'],
+  );
+
+  // Preview operations without mutating files
+  final plan = await orchestrator.planFlavor(
     'dev',
     platforms: ['android', 'ios'],
   );
@@ -632,7 +671,7 @@ The full roadmap is in [ROADMAP.md](ROADMAP.md). Here is a compact summary of pr
 
 | Version | Theme | Key deliverable |
 |---------|-------|----------------|
-| **v0.4.0** | Preview | `plan` command — preview operations without mutating files; reuses `ExecutionPlan` from v0.3.0 |
+| **v0.4.0** ✅ | Preview | `plan` command — preview operations without mutating files; `planFlavor()` public API; `--output json` |
 | **v0.5.0** | Safety | `rollback` command + timestamped backup before every non-dry-run apply |
 | **v0.6.0** | Conflict protection | Duplicate-target detection and `--force` guardrails |
 | **v0.7.0** | Automation contract | `--output json` for all commands; standardised exit codes |

@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:args/args.dart';
 import 'package:flutter_flavor_orchestrator/flutter_flavor_orchestrator.dart';
@@ -15,6 +16,7 @@ Future<void> main(List<String> arguments) async {
     ..addCommand('list', _buildListCommand())
     ..addCommand('info', _buildInfoCommand())
     ..addCommand('validate', _buildValidateCommand())
+    ..addCommand('plan', _buildPlanCommand())
     ..addFlag(
       'help',
       abbr: 'h',
@@ -45,6 +47,10 @@ Future<void> main(List<String> arguments) async {
         } else if (arguments.isNotEmpty && arguments.first == 'apply') {
           stderr.writeln(
             'Usage: flutter_flavor_orchestrator apply --flavor <name>',
+          );
+        } else if (arguments.isNotEmpty && arguments.first == 'plan') {
+          stderr.writeln(
+            'Usage: flutter_flavor_orchestrator plan --flavor <name>',
           );
         } else {
           _printUsage(parser);
@@ -85,6 +91,8 @@ Future<void> main(List<String> arguments) async {
         await _handleInfoCommand(command, projectRoot);
       case 'validate':
         await _handleValidateCommand(command, projectRoot);
+      case 'plan':
+        await _handlePlanCommand(command, projectRoot);
       default:
         stderr.writeln('Unknown command: ${command.name}');
         exit(1);
@@ -153,6 +161,39 @@ ArgParser _buildInfoCommand() => ArgParser()
     'config',
     abbr: 'c',
     help: _externalConfigHelp,
+  )
+  ..addFlag(
+    'verbose',
+    negatable: false,
+    help: 'Enable verbose debug output.',
+  );
+
+/// Builds the argument parser for the 'plan' command.
+ArgParser _buildPlanCommand() => ArgParser()
+  ..addOption(
+    'flavor',
+    abbr: 'f',
+    mandatory: true,
+    help: 'The flavor to preview (e.g., dev, staging, production).',
+  )
+  ..addOption(
+    'config',
+    abbr: 'c',
+    help: _externalConfigHelp,
+  )
+  ..addMultiOption(
+    'platform',
+    abbr: 'p',
+    allowed: ['android', 'ios'],
+    defaultsTo: ['android', 'ios'],
+    help: 'Target platform(s) to include in the plan.',
+  )
+  ..addOption(
+    'output',
+    abbr: 'o',
+    allowed: ['text', 'json'],
+    defaultsTo: 'text',
+    help: 'Output format: text (default) or json.',
   )
   ..addFlag(
     'verbose',
@@ -297,6 +338,81 @@ Future<void> _handleValidateCommand(
   }
 }
 
+/// Handles the 'plan' command.
+Future<void> _handlePlanCommand(
+  ArgResults command,
+  String projectRoot,
+) async {
+  final flavor = command['flavor'] as String?;
+
+  if (flavor == null || flavor.isEmpty) {
+    stderr
+      ..writeln('Error: --flavor argument is required')
+      ..writeln()
+      ..writeln('Usage: flutter_flavor_orchestrator plan --flavor <name>');
+    exit(1);
+  }
+
+  final platforms = command['platform'] as List<String>;
+  final verbose = command['verbose'] as bool;
+  final configPath = command['config'] as String?;
+  final outputFormat = command['output'] as String;
+
+  final orchestrator = FlavorOrchestrator(
+    projectRoot: projectRoot,
+    configPath: configPath,
+    verbose: verbose,
+  );
+
+  try {
+    final plan = await orchestrator.planFlavor(
+      flavor,
+      platforms: platforms,
+    );
+
+    if (outputFormat == 'json') {
+      stdout.writeln(jsonEncode(plan.toJson()));
+    } else {
+      _printPlanText(plan);
+    }
+
+    exit(0);
+  } on FormatException catch (e) {
+    stderr.writeln('Error: ${e.message}');
+    exit(1);
+  } on FileSystemException catch (e) {
+    stderr.writeln('Error: ${e.message}');
+    exit(1);
+  }
+}
+
+/// Prints a human-readable plan summary to stdout.
+void _printPlanText(ExecutionPlan plan) {
+  stdout
+    ..writeln('Execution Plan — flavor: ${plan.flavorName}')
+    ..writeln('Platforms: ${plan.platforms.join(', ')}')
+    ..writeln(
+      'Operations: ${plan.activeOperations} active, '
+      '${plan.skippedOperations} skipped '
+      '(${plan.totalOperations} total)',
+    )
+    ..writeln();
+
+  for (final platform in [...plan.platforms, ExecutionPlan.platformAssets]) {
+    final ops = plan.forPlatform(platform);
+    if (ops.isEmpty) continue;
+
+    stdout.writeln('[$platform]');
+    for (final op in ops) {
+      final src = op.sourcePath != null ? ' <- ${op.sourcePath}' : '';
+      final dst =
+          op.destinationPath != null ? ' -> ${op.destinationPath}' : '';
+      stdout.writeln('  [${op.kind.name}] ${op.description}$src$dst');
+    }
+    stdout.writeln();
+  }
+}
+
 /// Prints usage information.
 void _printUsage(ArgParser parser) {
   stdout.writeln('''
@@ -310,6 +426,7 @@ USAGE:
 
 COMMANDS:
   apply       Apply a flavor configuration (includes file_mappings processing)
+  plan        Preview the operations that would be performed for a flavor
   list        List all available flavors with mapping/replacement summary
   info        Display detailed flavor info, mappings, and replacement behavior
   validate    Validate all flavor configurations and mapping-related settings
@@ -329,6 +446,15 @@ EXAMPLES:
 
   # Validate an apply run without changing files
   flutter_flavor_orchestrator apply --flavor dev --dry-run
+
+  # Preview operations without mutating files
+  flutter_flavor_orchestrator plan --flavor dev
+
+  # Preview as JSON
+  flutter_flavor_orchestrator plan --flavor dev --output json
+
+  # Preview Android-only plan
+  flutter_flavor_orchestrator plan --flavor staging --platform android
 
   # List available flavors
   flutter_flavor_orchestrator list
@@ -352,5 +478,5 @@ https://github.com/lamp76/flutter_flavor_orchestrator
 
 /// Prints version information.
 void _printVersion() {
-  stdout.writeln('Flutter Flavor Orchestrator v0.3.0');
+  stdout.writeln('Flutter Flavor Orchestrator v0.4.0');
 }
