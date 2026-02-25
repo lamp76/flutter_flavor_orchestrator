@@ -400,7 +400,9 @@ void _printPlanText(ExecutionPlan plan) {
 
   for (final platform in [...plan.platforms, ExecutionPlan.platformAssets]) {
     final ops = plan.forPlatform(platform);
-    if (ops.isEmpty) continue;
+    if (ops.isEmpty) {
+      continue;
+    }
 
     stdout.writeln('[$platform]');
     for (final op in ops) {

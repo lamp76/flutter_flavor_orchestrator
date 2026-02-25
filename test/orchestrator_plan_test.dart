@@ -202,7 +202,7 @@ dev:
       expect(json, contains('active_operations'));
       expect(json, contains('skipped_operations'));
       expect(json, contains('operations'));
-      expect(json['operations'], isA<List>());
+      expect(json['operations'], isA<List<Object?>>());
     });
 
     test('toJson operations list entries have required keys', () async {
