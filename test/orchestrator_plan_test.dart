@@ -1,7 +1,6 @@
 import 'dart:io';
 
 import 'package:flutter_flavor_orchestrator/flutter_flavor_orchestrator.dart';
-import 'package:flutter_flavor_orchestrator/src/models/operation_kind.dart';
 import 'package:test/test.dart';
 
 /// Creates a minimal valid Flutter project in [dir] with the supplied

@@ -404,13 +404,30 @@ void _printPlanText(ExecutionPlan plan) {
 
     stdout.writeln('[$platform]');
     for (final op in ops) {
-      final src = op.sourcePath != null ? ' <- ${op.sourcePath}' : '';
-      final dst =
-          op.destinationPath != null ? ' -> ${op.destinationPath}' : '';
-      stdout.writeln('  [${op.kind.name}] ${op.description}$src$dst');
+      final paths = _formatOpPaths(op.sourcePath, op.destinationPath);
+      stdout.writeln('  [${op.kind.name}] ${op.description}$paths');
     }
     stdout.writeln();
   }
+}
+
+/// Returns a compact path suffix for a planned operation.
+///
+/// - Both paths present: `: src → dst`
+/// - Destination only:  ` → dst`
+/// - Source only:       `: src`
+/// - Neither:           `''`
+String _formatOpPaths(String? src, String? dst) {
+  if (src != null && dst != null) {
+    return ': $src → $dst';
+  }
+  if (dst != null) {
+    return ' → $dst';
+  }
+  if (src != null) {
+    return ': $src';
+  }
+  return '';
 }
 
 /// Prints usage information.
