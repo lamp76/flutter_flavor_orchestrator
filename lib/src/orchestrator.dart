@@ -7,6 +7,7 @@ import 'models/planned_operation.dart';
 import 'processors/android_processor.dart';
 import 'processors/asset_processor.dart';
 import 'processors/ios_processor.dart';
+import 'utils/backup_manager.dart';
 import 'utils/file_manager.dart';
 import 'utils/logger.dart';
 
@@ -39,6 +40,10 @@ final class FlavorOrchestrator {
       fileManager: fileManager,
       logger: logger,
     );
+    backupManager = BackupManager(
+      projectRoot: projectRoot,
+      logger: logger,
+    );
   }
 
   /// Root directory of the Flutter project.
@@ -68,11 +73,17 @@ final class FlavorOrchestrator {
   /// Asset processor for file mappings.
   late final AssetProcessor assetProcessor;
 
+  /// Persistent backup manager for pre-apply snapshots.
+  late final BackupManager backupManager;
+
   /// Applies a flavor configuration to the project.
   ///
   /// [flavorName] is the name of the flavor to apply.
   /// [platforms] specifies which platforms to process
   /// ('android', 'ios', or both).
+  ///
+  /// Before executing, a persistent backup of all destination files is
+  /// created in `.ffo/backups/` unless [dryRun] is `true`.
   ///
   /// Returns `true` if the operation succeeds, `false` otherwise.
   Future<bool> applyFlavor(
@@ -116,6 +127,12 @@ final class FlavorOrchestrator {
         '${plan.skippedOperations} skipped',
       );
 
+      // Create persistent backup before mutating any files (skip in dry-run)
+      BackupRecord? backupRecord;
+      if (!dryRun) {
+        backupRecord = await backupManager.createBackup(plan);
+      }
+
       // Process platforms
       final processAndroid = platforms.contains('android');
       final processIos = platforms.contains('ios');
@@ -133,6 +150,12 @@ final class FlavorOrchestrator {
 
       // Commit all file changes
       await fileManager.commit();
+
+      // Finalise backup with post-apply checksums so rollback can detect
+      // manual edits that happen after this apply.
+      if (backupRecord != null) {
+        await backupManager.finalizeBackup(backupRecord);
+      }
 
       if (dryRun) {
         logger
@@ -455,6 +478,61 @@ final class FlavorOrchestrator {
     );
     return _buildExecutionPlan(config, platforms);
   }
+
+  /// Restores project files from the most recent backup.
+  ///
+  /// Equivalent to `rollback --latest` on the CLI.
+  ///
+  /// If post-apply checksums are recorded and any current file was manually
+  /// edited after the last apply, the rollback aborts and returns `false`
+  /// unless [force] is `true`.
+  ///
+  /// Returns `true` on success, `false` if no backup is found or a conflict
+  /// prevents the restore.
+  Future<bool> rollbackLatest({bool force = false}) async {
+    logger.section('Rollback — latest');
+
+    final record = await backupManager.latestBackup();
+
+    if (record == null) {
+      logger.error(
+        'No backups found. Run `apply` first to create a backup.',
+      );
+      return false;
+    }
+
+    return backupManager.restore(record, force: force);
+  }
+
+  /// Restores project files from the backup identified by [backupId].
+  ///
+  /// [backupId] is the unique identifier shown by `rollback --list`.
+  ///
+  /// Returns `true` on success, `false` if the backup is not found or a
+  /// conflict prevents the restore.
+  Future<bool> rollbackById(String backupId, {bool force = false}) async {
+    logger.section('Rollback — id: $backupId');
+
+    final all = await backupManager.listBackups();
+    BackupRecord? record;
+    for (final r in all) {
+      if (r.id == backupId) {
+        record = r;
+        break;
+      }
+    }
+
+    if (record == null) {
+      logger.error('Backup not found: $backupId');
+      return false;
+    }
+
+    return backupManager.restore(record, force: force);
+  }
+
+  /// Returns all available backups sorted newest-first.
+  Future<List<BackupRecord>> listBackups() =>
+      backupManager.listBackups();
 
   /// Builds an [ExecutionPlan] for [config] and [platforms] without
   /// executing any file system operations.

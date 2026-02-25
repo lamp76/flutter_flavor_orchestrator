@@ -17,6 +17,7 @@ Future<void> main(List<String> arguments) async {
     ..addCommand('info', _buildInfoCommand())
     ..addCommand('validate', _buildValidateCommand())
     ..addCommand('plan', _buildPlanCommand())
+    ..addCommand('rollback', _buildRollbackCommand())
     ..addFlag(
       'help',
       abbr: 'h',
@@ -93,6 +94,8 @@ Future<void> main(List<String> arguments) async {
         await _handleValidateCommand(command, projectRoot);
       case 'plan':
         await _handlePlanCommand(command, projectRoot);
+      case 'rollback':
+        await _handleRollbackCommand(command, projectRoot);
       default:
         stderr.writeln('Unknown command: ${command.name}');
         exit(1);
@@ -207,6 +210,29 @@ ArgParser _buildValidateCommand() => ArgParser()
     'config',
     abbr: 'c',
     help: _externalConfigHelp,
+  )
+  ..addFlag(
+    'verbose',
+    negatable: false,
+    help: 'Enable verbose debug output.',
+  );
+
+/// Builds the argument parser for the 'rollback' command.
+ArgParser _buildRollbackCommand() => ArgParser()
+  ..addFlag(
+    'latest',
+    negatable: false,
+    help: 'Restore from the most recent backup (default behaviour).',
+  )
+  ..addOption(
+    'id',
+    help: 'Restore from the backup with this identifier.',
+  )
+  ..addFlag(
+    'force',
+    negatable: false,
+    help:
+        'Override checksum conflicts caused by manual edits after apply.',
   )
   ..addFlag(
     'verbose',
@@ -338,6 +364,34 @@ Future<void> _handleValidateCommand(
   }
 }
 
+/// Handles the 'rollback' command.
+Future<void> _handleRollbackCommand(
+  ArgResults command,
+  String projectRoot,
+) async {
+  final verbose = command['verbose'] as bool;
+  final force = command['force'] as bool;
+  final id = command['id'] as String?;
+
+  final orchestrator = FlavorOrchestrator(
+    projectRoot: projectRoot,
+    verbose: verbose,
+  );
+
+  try {
+    final bool success;
+    if (id != null && id.isNotEmpty) {
+      success = await orchestrator.rollbackById(id, force: force);
+    } else {
+      success = await orchestrator.rollbackLatest(force: force);
+    }
+    exit(success ? 0 : 1);
+  } on FileSystemException catch (e) {
+    stderr.writeln('Error: ${e.message}');
+    exit(1);
+  }
+}
+
 /// Handles the 'plan' command.
 Future<void> _handlePlanCommand(
   ArgResults command,
@@ -446,6 +500,7 @@ USAGE:
 COMMANDS:
   apply       Apply a flavor configuration (includes file_mappings processing)
   plan        Preview the operations that would be performed for a flavor
+  rollback    Restore files from the most recent (or a specific) backup
   list        List all available flavors with mapping/replacement summary
   info        Display detailed flavor info, mappings, and replacement behavior
   validate    Validate all flavor configurations and mapping-related settings
@@ -475,6 +530,15 @@ EXAMPLES:
   # Preview Android-only plan
   flutter_flavor_orchestrator plan --flavor staging --platform android
 
+  # Rollback to the most recent backup
+  flutter_flavor_orchestrator rollback --latest
+
+  # Rollback to a specific backup (use the ID shown in the backup log)
+  flutter_flavor_orchestrator rollback --id 20260225_194640123_dev
+
+  # Force rollback even if files were manually edited after the last apply
+  flutter_flavor_orchestrator rollback --latest --force
+
   # List available flavors
   flutter_flavor_orchestrator list
 
@@ -497,5 +561,5 @@ https://github.com/lamp76/flutter_flavor_orchestrator
 
 /// Prints version information.
 void _printVersion() {
-  stdout.writeln('Flutter Flavor Orchestrator v0.4.0');
+  stdout.writeln('Flutter Flavor Orchestrator v0.5.0');
 }

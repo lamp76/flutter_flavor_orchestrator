@@ -5,6 +5,68 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2026-02-25
+
+### Added
+- **Automatic backup before non-dry-run `apply`** — Before each `apply`
+  run (when `--dry-run` is not set) the orchestrator snapshots every
+  destination file referenced by the execution plan into
+  `.ffo/backups/<id>/`.  A `metadata.json` file records the flavor name,
+  timestamp, file list, pre-apply checksums, and (after the apply
+  completes) post-apply checksums.
+- **`rollback` CLI command** — Restores project files to their pre-apply
+  state.
+  - `rollback --latest` — Restores from the most recent backup.
+  - `rollback --id <id>` — Restores from a specific backup by its
+    identifier (shown in the apply log).
+  - `rollback --force` — Overrides checksum conflicts when files have been
+    manually edited after the last apply.
+  - Exit code `0` on success; `1` if no backup is found or a conflict
+    prevents the restore.
+- **`FlavorOrchestrator.rollbackLatest({bool force})`** — Public method
+  that restores the most recent backup programmatically.
+- **`FlavorOrchestrator.rollbackById(String id, {bool force})`** — Public
+  method that restores a specific backup by ID.
+- **`FlavorOrchestrator.listBackups()`** — Public method returning all
+  available backups sorted newest-first.
+- **`BackupManager`** (`lib/src/utils/backup_manager.dart`) — New utility
+  class that implements persistent backup creation, finalisation (post-apply
+  checksums), listing, and file restoration with conflict detection.
+- **`BackupRecord`** and **`BackupEntry`** — Immutable data models
+  describing a backup snapshot and its per-file entries, both with
+  `toJson()` / `fromJson()` support and exported as public API.
+- **`crypto` package dependency** — Used for SHA-256 checksum computation.
+- **`.ffo/` in `.gitignore`** — Backup artifacts are not tracked by Git.
+- **Tests** — `test/utils/backup_manager_test.dart` covers:
+  - Backup directory and `metadata.json` creation
+  - Backed-up file content integrity
+  - Pre-apply checksum correctness
+  - Skipping non-existent destination files
+  - Post-apply checksum persistence via `finalizeBackup`
+  - `listBackups` / `latestBackup` (empty, single, newest-first ordering)
+  - Successful restore with content verification
+  - Empty-entries restore returning `true`
+  - Conflict detection (returns `false` without `--force`)
+  - `--force` overrides conflict and restores correctly
+  - Restore without post-apply checksums (no false conflicts)
+  - `BackupRecord` JSON roundtrip
+- **Integration tests** — `test/orchestrator_rollback_test.dart` covers:
+  - `rollbackLatest` returns `false` when no backups exist
+  - Full apply → rollback cycle restoring original file content
+  - Dry-run apply does not create a backup
+  - `rollbackById` returns `false` for unknown ID
+  - `listBackups` returns empty list before any apply
+  - `listBackups` returns backup after a non-dry-run apply
+
+### Changed
+- **`FlavorOrchestrator.applyFlavor()`** — Now creates a persistent backup
+  (via `BackupManager.createBackup`) before mutating files, and finalises
+  it (via `BackupManager.finalizeBackup`) after a successful commit.
+  Dry-run mode is unchanged.
+- **CLI help** — `rollback` command added to `COMMANDS` section with usage
+  examples.
+- **Version** bumped to `0.5.0`.
+
 ## [0.4.0] - 2026-02-24
 
 ### Added
@@ -260,7 +322,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Atomic file operations with automatic rollback on errors
 - Detailed logging for debugging and auditing
 - Extensible architecture for future enhancements
-
+
+[0.5.0]: https://github.com/lamp76/flutter_flavor_orchestrator/releases/tag/v0.5.0
 [0.4.0]: https://github.com/lamp76/flutter_flavor_orchestrator/releases/tag/v0.4.0
 [0.3.0]: https://github.com/lamp76/flutter_flavor_orchestrator/releases/tag/v0.3.0
 [0.2.0]: https://github.com/lamp76/flutter_flavor_orchestrator/releases/tag/v0.2.0
