@@ -58,7 +58,7 @@ final class AssetProcessor {
         operations.add(
           PlannedOperation(
             kind: OperationKind.skip,
-            description: 'Skip missing source: $source',
+            description: 'Skip (source not found)',
             sourcePath: source,
             destinationPath: destination,
             platform: ExecutionPlan.platformAssets,
@@ -71,7 +71,7 @@ final class AssetProcessor {
         operations.add(
           PlannedOperation(
             kind: OperationKind.copyFile,
-            description: 'Copy file: $source → $destination',
+            description: 'Copy file',
             sourcePath: source,
             destinationPath: destination,
             platform: ExecutionPlan.platformAssets,
@@ -81,7 +81,7 @@ final class AssetProcessor {
         operations.add(
           PlannedOperation(
             kind: OperationKind.copyDirectory,
-            description: 'Copy directory: $source/ → $destination/',
+            description: 'Copy directory',
             sourcePath: source,
             destinationPath: destination,
             platform: ExecutionPlan.platformAssets,

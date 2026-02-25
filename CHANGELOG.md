@@ -5,6 +5,39 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2026-02-24
+
+### Added
+- **`plan` command** - Preview the operations that would be performed for a
+  flavor without mutating any files.
+  - Options: `--flavor` (required), `--config`, `--platform`, `--verbose`,
+    `--output` (`text` | `json`).
+  - Text output shows a per-platform summary with operation kind, description,
+    source and destination paths.
+  - JSON output is the serialised `ExecutionPlan.toJson()` — deterministic and
+    CI-friendly.
+  - Exit code `0` on success; `1` if the flavor is not found or config is
+    invalid.
+- **`FlavorOrchestrator.planFlavor()`** - New public method that returns the
+  `ExecutionPlan` for a flavor without executing it. Reuses the private
+  `_buildExecutionPlan()` pipeline, so the plan is guaranteed to match the
+  operations that `applyFlavor()` would perform.
+- **Tests** — `test/orchestrator_plan_test.dart` covers:
+  - Flavor name and platform propagation
+  - Android-only and iOS-only plan filtering
+  - Asset `copyFile` operation for existing file mappings
+  - `skip` operation for missing source paths
+  - No-mutation guarantee (file system unchanged after `planFlavor`)
+  - Operation order (android → ios → assets)
+  - `toJson()` top-level key stability
+  - `toJson()` operation entries contain required keys
+  - Error path: unknown flavor throws `FormatException`
+  - Provisioning path adds `copyFile` operation in Android plan
+
+### Changed
+- **CLI help** — `plan` command added to `COMMANDS` section and usage examples.
+- **Version** bumped to `0.4.0`.
+
 ## [0.3.0] - 2026-02-22
 
 ### Added
@@ -228,6 +261,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Detailed logging for debugging and auditing
 - Extensible architecture for future enhancements
 
+[0.4.0]: https://github.com/lamp76/flutter_flavor_orchestrator/releases/tag/v0.4.0
 [0.3.0]: https://github.com/lamp76/flutter_flavor_orchestrator/releases/tag/v0.3.0
 [0.2.0]: https://github.com/lamp76/flutter_flavor_orchestrator/releases/tag/v0.2.0
 [0.1.9]: https://github.com/lamp76/flutter_flavor_orchestrator/releases/tag/v0.1.9
