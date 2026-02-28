@@ -5,6 +5,7 @@ import 'package:crypto/crypto.dart';
 import 'package:path/path.dart' as path;
 
 import '../models/execution_plan.dart';
+import '../models/operation_kind.dart';
 import 'logger.dart';
 
 /// A single file entry within a [BackupRecord].
