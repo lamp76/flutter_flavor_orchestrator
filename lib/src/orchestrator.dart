@@ -551,7 +551,7 @@ final class FlavorOrchestrator {
     final operations = <PlannedOperation>[];
 
     if (platforms.contains('android')) {
-      operations.addAll(_buildAndroidOperations(config));
+      operations.addAll(await _buildAndroidOperations(config));
     }
 
     if (platforms.contains('ios')) {
@@ -570,7 +570,20 @@ final class FlavorOrchestrator {
   }
 
   /// Returns high-level [PlannedOperation]s for Android native file updates.
-  List<PlannedOperation> _buildAndroidOperations(FlavorConfig config) {
+  ///
+  /// Detects whether the project uses `build.gradle.kts` (Kotlin DSL) or
+  /// `build.gradle` (Groovy) so that the plan — and therefore the backup —
+  /// references the file that will actually be modified.
+  Future<List<PlannedOperation>> _buildAndroidOperations(
+    FlavorConfig config,
+  ) async {
+    // Mirror the detection logic used by AndroidProcessor: prefer .kts
+    final ktsFile =
+        File('$projectRoot/android/app/build.gradle.kts');
+    final gradleDestPath = await ktsFile.exists()
+        ? 'android/app/build.gradle.kts'
+        : 'android/app/build.gradle';
+
     final ops = <PlannedOperation>[
       const PlannedOperation(
         kind: OperationKind.writeFile,
@@ -578,10 +591,10 @@ final class FlavorOrchestrator {
         destinationPath: 'android/app/src/main/AndroidManifest.xml',
         platform: ExecutionPlan.platformAndroid,
       ),
-      const PlannedOperation(
+      PlannedOperation(
         kind: OperationKind.writeFile,
         description: 'Update build.gradle / build.gradle.kts',
-        destinationPath: 'android/app/build.gradle',
+        destinationPath: gradleDestPath,
         platform: ExecutionPlan.platformAndroid,
       ),
     ];

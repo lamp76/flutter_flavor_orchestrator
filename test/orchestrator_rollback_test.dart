@@ -98,6 +98,50 @@ dev:
       final backups = await orchestrator.listBackups();
       expect(backups, isEmpty);
     });
+
+    test('deletes newly created files and directories on rollback', () async {
+      // Create source files / directory — but NOT the destinations
+      final srcFile = File('${tempDir.path}/configs/dev/new_config.dart');
+      await srcFile.create(recursive: true);
+      await srcFile.writeAsString('// new config');
+
+      final srcThemeDir =
+          Directory('${tempDir.path}/resources/dev/themes');
+      await srcThemeDir.create(recursive: true);
+      await File('${srcThemeDir.path}/colors.dart')
+          .writeAsString('// new colors');
+
+      await _setupProject(tempDir, '''
+dev:
+  bundle_id: com.example.dev
+  app_name: App Dev
+  file_mappings:
+    'lib/config/new_config.dart': 'configs/dev/new_config.dart'
+    'lib/theme': 'resources/dev/themes'
+''');
+
+      final orchestrator = FlavorOrchestrator(projectRoot: tempDir.path);
+
+      // Neither destination exists before apply
+      final newFile = File('${tempDir.path}/lib/config/new_config.dart');
+      final newThemeDir = Directory('${tempDir.path}/lib/theme');
+      expect(await newFile.exists(), isFalse);
+      expect(await newThemeDir.exists(), isFalse);
+
+      final applySuccess =
+          await orchestrator.applyFlavor('dev', platforms: []);
+      expect(applySuccess, isTrue);
+
+      // Both should now exist after apply
+      expect(await newFile.exists(), isTrue);
+      expect(await newThemeDir.exists(), isTrue);
+
+      // Rollback must remove them since they didn't exist before apply
+      final rollbackSuccess = await orchestrator.rollbackLatest();
+      expect(rollbackSuccess, isTrue);
+      expect(await newFile.exists(), isFalse);
+      expect(await newThemeDir.exists(), isFalse);
+    });
   });
 
   group('FlavorOrchestrator.rollbackById', () {

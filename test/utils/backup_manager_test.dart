@@ -184,6 +184,129 @@ dev:
 
       expect(record.entries, isEmpty);
     });
+
+    test(
+        'tracks non-existent file destination in newPaths',
+        () async {
+      await _setupProject(tempDir, '''
+dev:
+  bundle_id: com.example.dev
+  app_name: App Dev
+  file_mappings:
+    'lib/config/new_file.dart': 'configs/dev/new_file.dart'
+''');
+
+      // Create source but NOT destination
+      final srcFile = File('${tempDir.path}/configs/dev/new_file.dart');
+      await srcFile.create(recursive: true);
+      await srcFile.writeAsString('// src');
+
+      const logger = Logger();
+      final manager = BackupManager(
+        projectRoot: tempDir.path,
+        logger: logger,
+      );
+      final orchestrator = FlavorOrchestrator(projectRoot: tempDir.path);
+      final plan = await orchestrator.planFlavor(
+        'dev',
+        platforms: [],
+      );
+
+      final record = await manager.createBackup(plan);
+
+      final expectedPath =
+          '${tempDir.path}/lib/config/new_file.dart';
+      expect(record.newPaths, contains(expectedPath));
+    });
+
+    test(
+        'tracks non-existent directory destination in newPaths',
+        () async {
+      // Create the source directory
+      final srcDir =
+          Directory('${tempDir.path}/resources/dev/themes');
+      await srcDir.create(recursive: true);
+      await File('${srcDir.path}/colors.dart').writeAsString('// c');
+
+      await _setupProject(tempDir, '''
+dev:
+  bundle_id: com.example.dev
+  app_name: App Dev
+  file_mappings:
+    'lib/theme': 'resources/dev/themes'
+''');
+
+      // lib/theme does NOT exist yet
+      const logger = Logger();
+      final manager = BackupManager(
+        projectRoot: tempDir.path,
+        logger: logger,
+      );
+      final orchestrator = FlavorOrchestrator(projectRoot: tempDir.path);
+      final plan = await orchestrator.planFlavor(
+        'dev',
+        platforms: [],
+      );
+
+      final record = await manager.createBackup(plan);
+
+      final expectedPath = '${tempDir.path}/lib/theme';
+      expect(record.newPaths, contains(expectedPath));
+      expect(record.entries, isEmpty);
+    });
+
+    test(
+        'backs up all files in an existing destination directory',
+        () async {
+      // Create destination directory with existing content
+      final themeDir = Directory('${tempDir.path}/lib/theme');
+      await themeDir.create(recursive: true);
+      await File('${themeDir.path}/colors.dart')
+          .writeAsString('// old colors');
+      await File('${themeDir.path}/typography.dart')
+          .writeAsString('// old typography');
+
+      // Create source directory
+      final srcDir =
+          Directory('${tempDir.path}/resources/dev/themes');
+      await srcDir.create(recursive: true);
+      await File('${srcDir.path}/colors.dart')
+          .writeAsString('// new colors');
+
+      await _setupProject(tempDir, '''
+dev:
+  bundle_id: com.example.dev
+  app_name: App Dev
+  file_mappings:
+    'lib/theme': 'resources/dev/themes'
+''');
+
+      const logger = Logger();
+      final manager = BackupManager(
+        projectRoot: tempDir.path,
+        logger: logger,
+      );
+      final orchestrator = FlavorOrchestrator(projectRoot: tempDir.path);
+      final plan = await orchestrator.planFlavor(
+        'dev',
+        platforms: [],
+      );
+
+      final record = await manager.createBackup(plan);
+
+      // Both files from the existing lib/theme must be backed up
+      expect(record.entries, hasLength(2));
+      expect(record.newPaths, isEmpty);
+      final backupRelPaths =
+          record.entries.map((e) => e.backupRelativePath).toList();
+      expect(
+        backupRelPaths,
+        containsAll([
+          'lib/theme/colors.dart',
+          'lib/theme/typography.dart',
+        ]),
+      );
+    });
   });
 
   group('BackupManager.finalizeBackup', () {
@@ -423,6 +546,89 @@ dev:
     });
 
     test(
+        'deletes newly created file tracked in newPaths',
+        () async {
+      await _setupProject(tempDir, '''
+dev:
+  bundle_id: com.example.dev
+  app_name: App Dev
+  file_mappings:
+    'lib/config/new_file.dart': 'configs/dev/new_file.dart'
+''');
+
+      final srcFile = File('${tempDir.path}/configs/dev/new_file.dart');
+      await srcFile.create(recursive: true);
+      await srcFile.writeAsString('// source');
+
+      const logger = Logger();
+      final manager = BackupManager(
+        projectRoot: tempDir.path,
+        logger: logger,
+      );
+      final orchestrator = FlavorOrchestrator(projectRoot: tempDir.path);
+      final plan = await orchestrator.planFlavor(
+        'dev',
+        platforms: [],
+      );
+
+      // Backup: destination does not exist → goes into newPaths
+      final record = await manager.createBackup(plan);
+
+      // Simulate apply creating the new file
+      final newFile = File('${tempDir.path}/lib/config/new_file.dart');
+      await newFile.create(recursive: true);
+      await newFile.writeAsString('// created by apply');
+      expect(await newFile.exists(), isTrue);
+
+      // Restore should delete the newly created file
+      final success = await manager.restore(record);
+      expect(success, isTrue);
+      expect(await newFile.exists(), isFalse);
+    });
+
+    test(
+        'deletes newly created directory tracked in newPaths',
+        () async {
+      final srcDir = Directory('${tempDir.path}/resources/dev/themes');
+      await srcDir.create(recursive: true);
+      await File('${srcDir.path}/colors.dart').writeAsString('// c');
+
+      await _setupProject(tempDir, '''
+dev:
+  bundle_id: com.example.dev
+  app_name: App Dev
+  file_mappings:
+    'lib/theme': 'resources/dev/themes'
+''');
+
+      // lib/theme does NOT exist yet
+      const logger = Logger();
+      final manager = BackupManager(
+        projectRoot: tempDir.path,
+        logger: logger,
+      );
+      final orchestrator = FlavorOrchestrator(projectRoot: tempDir.path);
+      final plan = await orchestrator.planFlavor(
+        'dev',
+        platforms: [],
+      );
+
+      final record = await manager.createBackup(plan);
+
+      // Simulate apply creating lib/theme
+      final themeDir = Directory('${tempDir.path}/lib/theme');
+      await themeDir.create(recursive: true);
+      await File('${themeDir.path}/colors.dart')
+          .writeAsString('// new colors');
+      expect(await themeDir.exists(), isTrue);
+
+      // Restore should delete the newly created directory
+      final success = await manager.restore(record);
+      expect(success, isTrue);
+      expect(await themeDir.exists(), isFalse);
+    });
+
+    test(
         'returns false on checksum mismatch without --force',
         () async {
       await _setupProject(tempDir, '''
@@ -567,6 +773,21 @@ dev:
       expect(restored.flavorName, equals(record.flavorName));
       expect(restored.backupDir, equals(record.backupDir));
       expect(restored.entries.length, equals(record.entries.length));
+      expect(restored.newPaths, equals(record.newPaths));
+    });
+
+    test('fromJson tolerates missing new_paths (legacy records)', () {
+      final json = <String, Object?>{
+        'id': '20260225_123456789_dev',
+        'flavor': 'dev',
+        'created_at': '2026-02-25T12:34:56.000Z',
+        'backup_dir': '/tmp/some/backup',
+        'entries': <Object?>[],
+        // no 'new_paths' key
+      };
+
+      final record = BackupRecord.fromJson(json);
+      expect(record.newPaths, isEmpty);
     });
   });
 }

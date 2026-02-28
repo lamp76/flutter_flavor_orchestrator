@@ -5,9 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.5.0] - 2026-02-25
+## [0.5.0] - 2026-02-28
 
-### Added
+### Fixed
+- **`build.gradle.kts` not backed up or restored** — The execution plan
+  previously hardcoded `android/app/build.gradle` as the Gradle destination,
+  so projects using Kotlin DSL (`build.gradle.kts`) were not included in the
+  backup and their Gradle file remained modified after a rollback.
+  `_buildAndroidOperations` is now async and checks for `build.gradle.kts`
+  first, mirroring the detection logic of `AndroidProcessor`.
+- **Newly created files and directories not removed on rollback** — Files and
+  directories that did not exist before an `apply` (e.g. a new
+  `lib/config/constants.dart`, or an entire `lib/theme/` directory populated
+  via `file_mappings`) remained in the project after a rollback because the
+  backup only tracked files that were present before the apply.
+  `BackupRecord` now carries a `newPaths` list (serialised as `new_paths` in
+  `metadata.json`) of absolute paths that were tracked as non-existent at
+  backup time.  `BackupManager.restore` deletes every path in `newPaths`
+  after restoring the backed-up files.
+- **Existing destination directories not fully backed up** — `copyDirectory`
+  plan operations with an existing destination only recorded the top-level
+  path in the old code; the individual files inside were never snapshotted.
+  `createBackup` now iterates the directory tree and backs up each file,
+  enabling full restore of any directory that was overwritten by apply.
+
+### Added (0.5.0 original features)
 - **Automatic backup before non-dry-run `apply`** — Before each `apply`
   run (when `--dry-run` is not set) the orchestrator snapshots every
   destination file referenced by the execution plan into

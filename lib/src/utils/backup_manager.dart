@@ -68,6 +68,7 @@ final class BackupRecord {
     required this.createdAt,
     required this.backupDir,
     required this.entries,
+    this.newPaths = const [],
   });
 
   /// Creates a [BackupRecord] from a JSON map (as produced by [toJson]).
@@ -81,6 +82,10 @@ final class BackupRecord {
       entries: entriesJson
           .map((e) => BackupEntry.fromJson(e as Map<String, Object?>))
           .toList(),
+      newPaths: (json['new_paths'] as List<Object?>?)
+              ?.cast<String>()
+              .toList() ??
+          const [],
     );
   }
 
@@ -99,6 +104,13 @@ final class BackupRecord {
   /// Per-file backup entries.
   final List<BackupEntry> entries;
 
+  /// Absolute paths of files or directories that did **not** exist before the
+  /// apply and were therefore created by the apply run.
+  ///
+  /// These paths are deleted during [BackupManager.restore] to bring the
+  /// project back to its exact pre-apply state.
+  final List<String> newPaths;
+
   /// Serialises this record to a JSON-compatible map.
   Map<String, Object?> toJson() => {
         'id': id,
@@ -106,6 +118,7 @@ final class BackupRecord {
         'created_at': createdAt.toIso8601String(),
         'backup_dir': backupDir,
         'entries': entries.map((e) => e.toJson()).toList(),
+        'new_paths': newPaths,
       };
 }
 
@@ -139,10 +152,17 @@ final class BackupManager {
   String get _backupBaseDir =>
       path.join(projectRoot, '.ffo', 'backups');
 
-  /// Backs up all destination files referenced by [plan].
+  /// Backs up all destination files/directories referenced by [plan].
   ///
-  /// Files that do not yet exist (new files the apply will create) are
-  /// silently skipped — they have nothing to restore.
+  /// - For destinations that already exist as **files**, the file is copied
+  ///   into the backup store.
+  /// - For destinations that already exist as **directories**
+  ///   (`copyDirectory` operations), every file currently inside that
+  ///   directory is copied into the backup store so the whole tree can be
+  ///   restored.
+  /// - For destinations that do **not** yet exist, the path is recorded in
+  ///   [BackupRecord.newPaths] so [restore] can delete them on rollback,
+  ///   returning the project to its exact pre-apply state.
   ///
   /// Returns the created [BackupRecord].
   Future<BackupRecord> createBackup(ExecutionPlan plan) async {
@@ -154,8 +174,13 @@ final class BackupManager {
     logger.debug('Creating persistent backup: $id');
 
     final entries = <BackupEntry>[];
+    final newPaths = <String>[];
 
     for (final op in plan.operations) {
+      if (op.kind == OperationKind.skip) {
+        continue;
+      }
+
       final dest = op.destinationPath;
       if (dest == null) {
         continue;
@@ -164,27 +189,67 @@ final class BackupManager {
       final absolutePath = path.isAbsolute(dest)
           ? dest
           : path.join(projectRoot, dest);
-      final originalFile = File(absolutePath);
-      if (!await originalFile.exists()) {
-        continue;
+
+      if (op.kind == OperationKind.copyDirectory) {
+        // Directory operation: backup every existing file, or track as new.
+        final destDir = Directory(absolutePath);
+        if (!await destDir.exists()) {
+          newPaths.add(absolutePath);
+          logger.debug('  Tracked new directory: $dest');
+        } else {
+          await for (final entity in destDir.list(recursive: true)) {
+            if (entity is! File) {
+              continue;
+            }
+            final relFromRoot =
+                path.relative(entity.path, from: projectRoot);
+            final backupFilePath = path.join(filesDir, relFromRoot);
+            await Directory(path.dirname(backupFilePath))
+                .create(recursive: true);
+            await entity.copy(backupFilePath);
+
+            final content = await File(backupFilePath).readAsBytes();
+            final checksum = sha256.convert(content).toString();
+
+            entries.add(
+              BackupEntry(
+                originalPath: entity.path,
+                backupRelativePath: relFromRoot,
+                preApplyChecksum: checksum,
+              ),
+            );
+          }
+          logger.debug('  Backed up directory: $dest');
+        }
+      } else {
+        // File operation (writeFile or copyFile).
+        final originalFile = File(absolutePath);
+        if (!await originalFile.exists()) {
+          newPaths.add(absolutePath);
+          logger.debug('  Tracked new file: $dest');
+          continue;
+        }
+
+        // Mirror the project directory structure inside `files/`
+        final relFromRoot = path.isAbsolute(dest)
+            ? path.relative(dest, from: projectRoot)
+            : dest;
+        final backupFilePath = path.join(filesDir, relFromRoot);
+        await Directory(path.dirname(backupFilePath)).create(recursive: true);
+        await originalFile.copy(backupFilePath);
+
+        final content = await File(backupFilePath).readAsBytes();
+        final checksum = sha256.convert(content).toString();
+
+        entries.add(
+          BackupEntry(
+            originalPath: absolutePath,
+            backupRelativePath: relFromRoot,
+            preApplyChecksum: checksum,
+          ),
+        );
+        logger.debug('  Backed up: $dest');
       }
-
-      // Mirror the project directory structure inside `files/`
-      final backupFilePath = path.join(filesDir, dest);
-      await Directory(path.dirname(backupFilePath)).create(recursive: true);
-      await originalFile.copy(backupFilePath);
-
-      final content = await File(backupFilePath).readAsBytes();
-      final checksum = sha256.convert(content).toString();
-
-      entries.add(
-        BackupEntry(
-          originalPath: absolutePath,
-          backupRelativePath: dest,
-          preApplyChecksum: checksum,
-        ),
-      );
-      logger.debug('  Backed up: $dest');
     }
 
     final record = BackupRecord(
@@ -193,11 +258,15 @@ final class BackupManager {
       createdAt: DateTime.now(),
       backupDir: backupDir,
       entries: entries,
+      newPaths: newPaths,
     );
 
     await _writeMetadata(record);
-    logger
-        .info('Backup created: $id (${entries.length} file(s) snapshotted)');
+    logger.info(
+      'Backup created: $id '
+      '(${entries.length} file(s) snapshotted, '
+      '${newPaths.length} new path(s) tracked)',
+    );
     return record;
   }
 
@@ -235,6 +304,7 @@ final class BackupManager {
       createdAt: record.createdAt,
       backupDir: record.backupDir,
       entries: updatedEntries,
+      newPaths: record.newPaths,
     );
 
     await _writeMetadata(updated);
@@ -288,6 +358,10 @@ final class BackupManager {
   }
 
   /// Restores all files in [record] to their pre-apply state.
+  ///
+  /// - Files that existed before the apply are restored from the backup store.
+  /// - Files and directories that were **created** by the apply (recorded in
+  ///   [BackupRecord.newPaths]) are deleted.
   ///
   /// If post-apply checksums are recorded and any current file differs from
   /// the expected post-apply state (indicating a manual edit), the restore
@@ -346,6 +420,7 @@ final class BackupManager {
 
     final filesDir = path.join(record.backupDir, 'files');
 
+    // Restore backed-up files to their pre-apply content.
     for (final entry in record.entries) {
       final backupFile =
           File(path.join(filesDir, entry.backupRelativePath));
@@ -363,9 +438,26 @@ final class BackupManager {
       logger.debug('Restored: ${entry.originalPath}');
     }
 
+    // Remove files and directories that were created by the apply and did
+    // not exist before it.
+    for (final newPath in record.newPaths) {
+      final file = File(newPath);
+      if (await file.exists()) {
+        await file.delete();
+        logger.debug('Removed new file: $newPath');
+        continue;
+      }
+      final dir = Directory(newPath);
+      if (await dir.exists()) {
+        await dir.delete(recursive: true);
+        logger.debug('Removed new directory: $newPath');
+      }
+    }
+
     logger.success(
       'Rollback complete: '
-      '${record.entries.length} file(s) restored',
+      '${record.entries.length} file(s) restored, '
+      '${record.newPaths.length} new path(s) removed',
     );
     return true;
   }
