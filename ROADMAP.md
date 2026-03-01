@@ -37,7 +37,7 @@ Each item includes:
 - `FlavorOrchestrator.planFlavor()` public method returning `ExecutionPlan` without executing.
 - `--output json` for machine-readable plan output.
 
-### `v0.5.0` (safety release)
+### ✅ `v0.5.0` (safety release)
 - Feature 2: automatic backup before non-dry-run `apply`.
 - Initial `rollback --latest` support.
 
@@ -272,7 +272,7 @@ Speeds onboarding and reduces initial configuration mistakes.
 
 1. ✅ Shared operation planning refactor (foundation for `plan`, safety checks, backups) — **done in v0.3.0**
 2. ✅ `plan` command — **done in v0.4.0**
-3. Backup + `rollback`
+3. ✅ Backup + `rollback` — **done in v0.5.0**
 4. Output formatter abstraction + JSON output
 5. Schema versioning + strict validation
 6. `doctor` command

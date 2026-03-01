@@ -711,7 +711,7 @@ The full roadmap is in [ROADMAP.md](ROADMAP.md). Here is a compact summary of pr
 | Version | Theme | Key deliverable |
 |---------|-------|----------------|
 | **v0.4.0** ✅ | Preview | `plan` command — preview operations without mutating files; `planFlavor()` public API; `--output json` |
-| **v0.5.0** | Safety | `rollback` command + timestamped backup before every non-dry-run apply |
+| **v0.5.0** ✅ | Safety | `rollback` command + timestamped backup before every non-dry-run apply |
 | **v0.6.0** | Conflict protection | Duplicate-target detection and `--force` guardrails |
 | **v0.7.0** | Automation contract | `--output json` for all commands; standardised exit codes |
 | **v0.8.0** | Schema hardening | `schema_version` enforcement, `validate --strict`, migration scaffold |
