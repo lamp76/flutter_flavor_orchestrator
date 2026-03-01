@@ -12,7 +12,21 @@
 
 Build-time orchestration for Flutter flavors across Android and iOS. Configure environment-specific app identity, native metadata, provisioning files, and resource mappings from a single YAML source.
 
-## What's New (v0.4.0)
+## What's New (v0.5.0)
+
+- **Automatic backup before `apply`** — Every non-dry-run `apply` now snapshots
+  all destination files into `.ffo/backups/` before touching them.  Each backup
+  stores file content, pre-apply checksums, and (after a successful apply)
+  post-apply checksums so that manual edits can be detected.
+- **`rollback` command** — Restore project files to their pre-apply state:
+  `flutter_flavor_orchestrator rollback --latest`
+- **`rollback --id <id>`** — Restore from a specific backup by its identifier.
+- **`rollback --force`** — Override checksum conflicts when files were edited
+  after the last apply.
+- **`FlavorOrchestrator.rollbackLatest()` / `rollbackById()`** — New public
+  API methods for programmatic rollback.
+
+## Previous: What's New (v0.4.0)
 
 - **`plan` command** — Preview operations without mutating files: `flutter_flavor_orchestrator plan --flavor dev`
 - **`--output json`** — Machine-readable plan output: `plan --flavor dev --output json`
@@ -39,10 +53,10 @@ Build-time orchestration for Flutter flavors across Android and iOS. Configure e
 - **Provisioning support** - Manage `google-services.json` and `GoogleService-Info.plist`
 - **File mappings** - Copy flavor-specific files and recursive directories
 - **Atomic directory replacement** - Backup/restore-safe replacement of destination directories
-- **Safe operations** - Automatic backup and rollback on failures
+- **Persistent backup & rollback** — Automatic pre-apply snapshots with checksum validation and `rollback` CLI command
 - **YAML-driven configuration** - Single declarative config for all flavors
 - **Typed execution plan** - `ExecutionPlan`, `PlannedOperation`, `OperationKind` models with `toJson()`
-- **CLI workflow** - `apply`, `plan`, `list`, `info`, and `validate` commands
+- **CLI workflow** - `apply`, `plan`, `rollback`, `list`, `info`, and `validate` commands
 - **`plan` command** — Preview operations without file mutations; text and JSON output
 - **Validation and error handling** - Pre-checks for config, files, and required fields
 - **Documentation and examples** - Full example project and practical guides
@@ -50,8 +64,8 @@ Build-time orchestration for Flutter flavors across Android and iOS. Configure e
 ## 📋 Table of Contents
 
 - [Installation](#installation)
-- [What's New (v0.4.0)](#whats-new-v040)
-- [Previous: What's New (v0.3.0)](#previous-whats-new-v030)
+- [What's New (v0.5.0)](#whats-new-v050)
+- [Previous: What's New (v0.4.0)](#previous-whats-new-v040)
 - [Quick Start](#quick-start)
 - [Pub.dev Workflow](#pubdev-workflow)
 - [Configuration](#configuration)
@@ -72,7 +86,7 @@ Add `flutter_flavor_orchestrator` to your `pubspec.yaml` dev dependencies:
 
 ```yaml
 dev_dependencies:
-  flutter_flavor_orchestrator: ^0.4.0
+  flutter_flavor_orchestrator: ^0.5.0
 ```
 
 Then run:
@@ -330,6 +344,31 @@ JSON output (`--output json`) returns the serialised `ExecutionPlan` with stable
 - `platforms` — target platforms
 - `total_operations`, `active_operations`, `skipped_operations` — operation counts
 - `operations` — ordered list of operation objects
+
+### Rollback Command
+
+Restore project files to their pre-apply state from a persistent backup created
+by the last `apply` run:
+
+```bash
+# Rollback to the most recent backup
+flutter_flavor_orchestrator rollback --latest
+
+# Rollback to a specific backup by ID (shown in the apply log)
+flutter_flavor_orchestrator rollback --id 20260225_194640123_dev
+
+# Force rollback even if files were manually edited after the last apply
+flutter_flavor_orchestrator rollback --latest --force
+```
+
+Every non-dry-run `apply` automatically creates a snapshot in `.ffo/backups/`
+before touching any files.  The backup stores:
+- A copy of every destination file **before** the apply
+- SHA-256 checksums of the pre-apply content
+- SHA-256 checksums of the post-apply content (for detecting manual edits)
+
+If files have been manually edited **after** the last apply, `rollback` will
+report a conflict and exit with code `1`.  Pass `--force` to override.
 
 ### List Command
 

@@ -13,6 +13,7 @@ This example demonstrates how to use the `flutter_flavor_orchestrator` package t
 - ✅ Flavor-specific assets
 - ✅ External YAML config loading with `--config` (CI/CD friendly)
 - ✅ Plan preview with `plan --flavor <name>` (no file mutations)
+- ✅ Automatic backup and `rollback --latest` to restore previous state
 
 ## Project Structure
 
@@ -83,13 +84,30 @@ Or get machine-readable JSON output:
 flutter_flavor_orchestrator plan --flavor dev --output json
 ```
 
-### 5. Validate Configurations
+### 5. Rollback to Previous State
+
+After an `apply`, restore all modified files to their pre-apply state:
+```bash
+flutter_flavor_orchestrator rollback --latest
+```
+
+Force rollback even if files were manually edited after the apply:
+```bash
+flutter_flavor_orchestrator rollback --latest --force
+```
+
+Rollback a specific backup by ID (shown in the `apply` log):
+```bash
+flutter_flavor_orchestrator rollback --id 20260225_194640123_dev
+```
+
+### 6. Validate Configurations
 
 ```bash
 flutter_flavor_orchestrator validate
 ```
 
-### 5. Use External Configuration Path (CI/CD)
+### 7. Use External Configuration Path (CI/CD)
 
 Load flavor configuration from a YAML file outside the project root:
 

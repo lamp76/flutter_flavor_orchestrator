@@ -7,6 +7,9 @@
 .buildlog/
 .history
 
+# Flutter Flavor Orchestrator persistent state
+.ffo/
+
 
 
 # Flutter repo-specific
