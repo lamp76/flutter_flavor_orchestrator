@@ -14,6 +14,7 @@ This example demonstrates how to use the `flutter_flavor_orchestrator` package t
 - ✅ External YAML config loading with `--config` (CI/CD friendly)
 - ✅ Plan preview with `plan --flavor <name>` (no file mutations)
 - ✅ Automatic backup and `rollback --latest` to restore previous state
+- ✅ Conflict detection — duplicate and overlapping destination guardrails
 
 ## Project Structure
 
@@ -84,7 +85,28 @@ Or get machine-readable JSON output:
 flutter_flavor_orchestrator plan --flavor dev --output json
 ```
 
-### 5. Rollback to Previous State
+### 5. Conflict Detection (New in v0.6.0)
+
+The `apply` command automatically checks for conflicts before touching any
+files.  If two operations target the same destination path, or one destination
+is a parent directory of another, `apply` fails fast:
+
+```bash
+# This fails if the config contains duplicate or overlapping destinations
+flutter_flavor_orchestrator apply --flavor dev
+
+# Override conflict guardrails and apply anyway
+flutter_flavor_orchestrator apply --flavor dev --force
+```
+
+Use `plan` to inspect the execution plan first:
+
+```bash
+# Inspect the plan — no files are mutated
+flutter_flavor_orchestrator plan --flavor dev
+```
+
+### 6. Rollback to Previous State
 
 After an `apply`, restore all modified files to their pre-apply state:
 ```bash
@@ -101,13 +123,13 @@ Rollback a specific backup by ID (shown in the `apply` log):
 flutter_flavor_orchestrator rollback --id 20260225_194640123_dev
 ```
 
-### 6. Validate Configurations
+### 7. Validate Configurations
 
 ```bash
 flutter_flavor_orchestrator validate
 ```
 
-### 7. Use External Configuration Path (CI/CD)
+### 8. Use External Configuration Path (CI/CD)
 
 Load flavor configuration from a YAML file outside the project root:
 
