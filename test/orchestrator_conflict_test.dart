@@ -3,6 +3,14 @@ import 'dart:io';
 import 'package:flutter_flavor_orchestrator/flutter_flavor_orchestrator.dart';
 import 'package:test/test.dart';
 
+/// YAML file_mappings entry targeting the Android manifest.
+///
+/// Defined here to avoid the 81-char line limit imposed by
+/// `lines_longer_than_80_chars`. Indentation is added at each usage site.
+const _kManifestMapping =
+    "'android/app/src/main/AndroidManifest.xml':"
+    " 'configs/dev/AndroidManifest.xml'";
+
 /// Creates a minimal valid Flutter project in [dir] with the supplied
 /// [configYaml] written to `flavor_config.yaml`.
 Future<void> _setupProject(Directory dir, String configYaml) async {
@@ -59,7 +67,7 @@ dev:
   bundle_id: com.example.dev
   app_name: App Dev
   file_mappings:
-    'android/app/src/main/AndroidManifest.xml': 'configs/dev/AndroidManifest.xml'
+    $_kManifestMapping
 ''');
 
       final orchestrator = FlavorOrchestrator(projectRoot: tempDir.path);
@@ -105,7 +113,7 @@ dev:
   bundle_id: com.example.dev
   app_name: App Dev
   file_mappings:
-    'android/app/src/main/AndroidManifest.xml': 'configs/dev/AndroidManifest.xml'
+    $_kManifestMapping
 ''');
 
       final orchestrator = FlavorOrchestrator(projectRoot: tempDir.path);
@@ -138,7 +146,7 @@ dev:
   bundle_id: com.example.dev
   app_name: App Dev
   file_mappings:
-    'android/app/src/main/AndroidManifest.xml': 'configs/dev/AndroidManifest.xml'
+    $_kManifestMapping
 ''');
 
       final orchestrator = FlavorOrchestrator(projectRoot: tempDir.path);
@@ -224,7 +232,7 @@ dev:
   bundle_id: com.example.dev
   app_name: App Dev
   file_mappings:
-    'android/app/src/main/AndroidManifest.xml': 'configs/dev/AndroidManifest.xml'
+    $_kManifestMapping
 ''');
 
       final orchestrator = FlavorOrchestrator(projectRoot: tempDir.path);

@@ -97,7 +97,10 @@ void main() {
       expect(conflicts, hasLength(1));
       expect(conflicts.first.code, equals('overlapping_destinations'));
       expect(conflicts.first.severity, equals(ConflictSeverity.error));
-      expect(conflicts.first.conflictingPaths, containsAll(['lib', 'lib/config/app_config.dart']));
+      expect(
+        conflicts.first.conflictingPaths,
+        containsAll(['lib', 'lib/config/app_config.dart']),
+      );
     });
 
     test('detects overlapping destinations (child before parent)', () {
@@ -194,7 +197,8 @@ void main() {
         ]),
       );
 
-      // Should have two overlap reports: (lib, lib/a.dart) and (lib, lib/b.dart)
+      // Should have two overlap reports:
+      // (lib, lib/a.dart) and (lib, lib/b.dart)
       final overlapReports =
           conflicts.where((c) => c.code == 'overlapping_destinations').toList();
       expect(overlapReports, hasLength(2));

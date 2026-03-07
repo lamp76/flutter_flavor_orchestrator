@@ -58,7 +58,8 @@ final class ConflictReport {
 ///
 /// 1. **Duplicate destinations** (`duplicate_destination`) — two or more
 ///    active (non-skip) operations write to the same destination path.
-///    This always overwrites silently and is classified as [ConflictSeverity.error].
+///    This always overwrites silently and is classified as
+///    [ConflictSeverity.error].
 ///
 /// 2. **Overlapping destinations** (`overlapping_destinations`) — one
 ///    destination path is a parent directory of another destination path,
@@ -81,12 +82,10 @@ final class ConflictAnalyzer {
   ///
   /// Returns a (possibly empty) list of [ConflictReport]s describing every
   /// conflict found.  An empty list means the plan is conflict-free.
-  List<ConflictReport> analyze(ExecutionPlan plan) {
-    final conflicts = <ConflictReport>[];
-    conflicts.addAll(_detectDuplicateDestinations(plan));
-    conflicts.addAll(_detectOverlappingDestinations(plan));
-    return conflicts;
-  }
+  List<ConflictReport> analyze(ExecutionPlan plan) => [
+        ..._detectDuplicateDestinations(plan),
+        ..._detectOverlappingDestinations(plan),
+      ];
 
   /// Detects operations that share the same destination path.
   List<ConflictReport> _detectDuplicateDestinations(ExecutionPlan plan) {
