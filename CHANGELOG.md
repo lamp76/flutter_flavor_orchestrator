@@ -5,7 +5,66 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.7.0] - 2026-03-08
+## [0.8.0] - 2026-03-08
+
+### Added
+- **`schema_version` support** — Add `schema_version: 1` at the top of your
+  `flavor_config.yaml` to declare the config schema.  The parser now
+  recognises this reserved key and skips it when enumerating flavors, so
+  no type errors occur even on existing configs.
+- **`validate --strict`** — New strict validation mode that fails when:
+  - `schema_version` is missing from the config document.
+  - Unknown keys are present in a flavor block (e.g. `flavors.dev.typo_key`).
+  - Deprecated keys are used in a flavor block.
+  - Unknown keys are present in a `provisioning` sub-block
+    (e.g. `flavors.dev.provisioning.bad_key`).
+- **Actionable key-path error messages** — Every schema error/warning includes
+  the full dot-separated key path (e.g. `flavors.dev.provisioning.bad_key`)
+  so users can locate the issue immediately.
+- **Schema warnings in non-strict mode** — Without `--strict`, schema issues
+  are reported as warnings (not errors) so existing configs remain
+  backward-compatible.  Each flavor result in `validate --output json` now
+  includes a `warnings` list alongside `errors`.
+- **`validate --output json` enhancements** — The JSON payload now includes
+  two new stable top-level keys: `schema_version` (integer or `null`) and
+  `strict` (boolean).  The per-flavor entries now also include a `warnings`
+  key (list of schema warning strings).
+- **`FlavorOrchestrator.getSchemaVersion()`** — Returns the `schema_version`
+  from the config document without any validation side-effects.
+- **`FlavorOrchestrator.validateConfigurationsDetailed({bool strict})`** —
+  `strict` parameter added (defaults to `false` for full backward
+  compatibility).  Each returned entry now includes a `warnings` key.
+- **`FlavorOrchestrator.validateConfigurations({bool strict})`** — `strict`
+  parameter added (defaults to `false`).  Schema warnings are always logged
+  in text mode; schema errors in strict mode also trigger a non-zero exit.
+- **`ConfigParser.extractSchemaVersion(Map)`** — Extracts the `schema_version`
+  integer from a raw YAML map.
+- **`ConfigParser.parseSchemaVersion(projectRoot, {configPath})`** — Async
+  convenience wrapper that loads the config file and extracts the schema
+  version.
+- **`ConfigParser.validateSchema(projectRoot, {configPath, strict})`** —
+  Runs the full schema validation pass and returns a `SchemaValidationResult`.
+- **`SchemaValidationResult`** — New model exported as public API with fields:
+  `schemaVersion`, `globalErrors`, `globalWarnings`, `flavorErrors`,
+  `flavorWarnings`.  Helper methods: `errorsForFlavor`, `warningsForFlavor`,
+  `isValid`, `hasWarnings`.
+- **`SchemaValidator`** — New public class with a single static `validate`
+  method.  Exposes `knownFlavorKeys`, `knownProvisioningKeys`, and
+  `deprecatedFlavorKeys` constants.
+- **`SchemaMigration` interface** — Abstract interface for future schema
+  migration steps (`fromVersion`, `toVersion`, `migrate`).
+- **`SchemaMigrations` registry** — Holds all registered migrations; provides
+  `applyMigrations(raw, fromVersion:)` helper.  A no-op v1→v1 migration is
+  registered as a scaffold.
+
+### Changed
+- **`validate` command** — Gains a `--strict` flag; JSON output now includes
+  `schema_version` and `strict` keys and per-flavor `warnings`.
+- **`_printVersion()`** — Bumped to `v0.8.0`.
+- **`example/flavor_config.yaml`** — Updated to include `schema_version: 1`.
+- **`pubspec.yaml`** — Version bumped to `0.8.0`.
+
+
 
 ### Added
 - **`--output json` for `apply`** — Emits a machine-readable JSON object with

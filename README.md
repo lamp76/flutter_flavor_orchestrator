@@ -12,7 +12,29 @@
 
 Build-time orchestration for Flutter flavors across Android and iOS. Configure environment-specific app identity, native metadata, provisioning files, and resource mappings from a single YAML source.
 
-## What's New (v0.7.0)
+## What's New (v0.8.0)
+
+- **`schema_version` support** — Add `schema_version: 1` at the top of your
+  `flavor_config.yaml` to enable strict validation and future migration support.
+  Existing configs without it continue to work (backward compatible).
+- **`validate --strict`** — New strict validation mode that fails on missing
+  `schema_version`, unknown keys in flavor or provisioning blocks, and deprecated
+  keys — with actionable key-path error messages (e.g.
+  `flavors.dev.provisioning.bad_key`).
+- **Schema warnings in non-strict mode** — Without `--strict`, schema issues are
+  reported as warnings (not errors), keeping existing configs fully backward-compatible.
+- **`validate --output json` additions** — The JSON payload now includes
+  `schema_version` (integer or `null`) and `strict` (boolean) at the top level,
+  and each per-flavor entry now includes a `warnings` list.
+- **`SchemaMigration` interface + `SchemaMigrations` registry** — A
+  future-proof scaffold for config format evolution; a no-op v1→v1 migration is
+  included.
+- **`FlavorOrchestrator.getSchemaVersion()`** — Returns the declared
+  `schema_version` from the config without running validation.
+- **`SchemaValidator` / `SchemaValidationResult`** — New public API classes for
+  programmatic schema validation.
+
+## Previous: What's New (v0.7.0)
 
 - **`--output json` for all commands** — Every command (`apply`, `list`, `info`,
   `validate`, `plan`, `rollback`) now supports `--output json` for
@@ -96,6 +118,8 @@ Build-time orchestration for Flutter flavors across Android and iOS. Configure e
 - **Persistent backup & rollback** — Automatic pre-apply snapshots with checksum validation and `rollback` CLI command
 - **Conflict detection** — Pre-apply duplicate-target and overlapping-destination guardrails; `--force` override
 - **Machine-readable JSON output** — `--output json` for all commands (`list`, `info`, `validate`, `plan`, `rollback`); stable top-level keys for CI automation
+- **Strict schema validation** — `validate --strict` rejects unknown/deprecated keys and missing `schema_version` with actionable key-path messages
+- **Schema versioning & migration scaffold** — `schema_version: 1` in config; `SchemaMigration` interface for future format evolution
 - **YAML-driven configuration** - Single declarative config for all flavors
 - **Typed execution plan** - `ExecutionPlan`, `PlannedOperation`, `OperationKind` models with `toJson()`
 - **CLI workflow** - `apply`, `plan`, `rollback`, `list`, `info`, and `validate` commands
@@ -130,7 +154,7 @@ Add `flutter_flavor_orchestrator` to your `pubspec.yaml` dev dependencies:
 
 ```yaml
 dev_dependencies:
-  flutter_flavor_orchestrator: ^0.7.0
+  flutter_flavor_orchestrator: ^0.8.0
 ```
 
 Then run:
@@ -152,6 +176,9 @@ dart pub global activate flutter_flavor_orchestrator
 Create a `flavor_config.yaml` file in your project root:
 
 ```yaml
+# Recommended: declare schema_version for strict validation support
+schema_version: 1
+
 dev:
   bundle_id: com.example.myapp.dev
   app_name: MyApp Dev
@@ -496,16 +523,35 @@ flutter_flavor_orchestrator validate --config ./ci/flavor_config.yaml
 
 # Machine-readable JSON output
 flutter_flavor_orchestrator validate --output json
+
+# Strict schema validation (fails on missing schema_version or unknown keys)
+flutter_flavor_orchestrator validate --strict
+
+# Strict + JSON — CI-friendly
+flutter_flavor_orchestrator validate --strict --output json
 ```
 
 JSON output (`--output json`) returns a stable object:
 - `command` — `"validate"`
 - `valid` — `true` if all flavors are valid
+- `schema_version` — the declared `schema_version` integer, or `null` if absent
+- `strict` — `true` when `--strict` was passed
 - `flavors` — array of per-flavor objects, each with `name`, `valid`,
-  `errors` (list of error strings, empty when valid)
+  `errors` (list of error strings, empty when valid),
+  `warnings` (list of schema warning strings, empty in strict mode)
 
 All flavors are evaluated regardless of errors — `--output json` never aborts
 early like text mode does.
+
+**Strict mode** (`--strict`) enables schema hardening:
+- Missing `schema_version` → validation error with remediation message
+- Unknown keys in a flavor block (e.g. `flavors.dev.typo_key`) → error
+- Unknown keys in a `provisioning` block (e.g. `flavors.dev.provisioning.bad`) → error
+- Deprecated keys → error (same as unknown in strict mode)
+
+**Non-strict mode** (default) is fully backward-compatible:
+- Schema issues produce `warnings` in the JSON output but do not fail validation
+- Existing configs without `schema_version` continue to work without changes
 
 ### Help
 
@@ -616,15 +662,18 @@ lib/
 │   │   ├── android_processor.dart
 │   │   ├── asset_processor.dart     # planFileMappings() added (v0.3.0)
 │   │   └── ios_processor.dart
+│   ├── schema/              # Schema validation & migration (v0.8.0)
+│   │   ├── schema_migration.dart    # SchemaMigration interface + registry
+│   │   └── schema_validator.dart    # SchemaValidator + SchemaValidationResult
 │   ├── utils/              # Utilities
 │   │   ├── backup_manager.dart      # Persistent backup/restore (v0.5.0)
 │   │   ├── conflict_analyzer.dart   # Duplicate/overlap detection (v0.6.0)
 │   │   ├── file_manager.dart
 │   │   ├── logger.dart              # silent mode added (v0.7.0)
 │   │   └── output_formatter.dart    # OutputFormat, OutputFormatter (v0.7.0)
-│   ├── config_parser.dart  # Configuration parsing; parseConfigUnchecked() (v0.7.0)
-│   └── orchestrator.dart   # Main orchestrator; getFlavorInfo(),
-│                           #   validateConfigurationsDetailed(), silent (v0.7.0)
+│   ├── config_parser.dart  # Configuration parsing; schema validation (v0.8.0)
+│   └── orchestrator.dart   # Main orchestrator; getSchemaVersion(),
+│                           #   validateConfigurationsDetailed(strict) (v0.8.0)
 └── flutter_flavor_orchestrator.dart  # Public API
 ```
 
@@ -857,12 +906,12 @@ The full roadmap is in [ROADMAP.md](ROADMAP.md). Here is a compact summary of pr
 | **v0.5.0** | `rollback` command + timestamped backup before every non-dry-run apply; `rollbackLatest()` / `rollbackById()` public API |
 | **v0.6.0** | Conflict detection — duplicate-target and overlapping-destination guardrails; `apply --force`; `ConflictAnalyzer` public API |
 | **v0.7.0** | Automation contract — `--output json` for `list`, `info`, `validate`, `plan`, `rollback`; `OutputFormatter` public API; `FlavorConfig.toJson()` |
+| **v0.8.0** | Schema hardening — `schema_version` enforcement, `validate --strict`, unknown-key detection with key-path messages, `SchemaMigration` scaffold |
 
 ### Upcoming
 
 | Version | Theme | Key deliverable |
 |---------|-------|----------------|
-| **v0.8.0** | Schema hardening | `schema_version` enforcement, `validate --strict`, migration scaffold |
 | **v0.9.0** | Diagnostics | `doctor` command with categorised findings (error/warning/info) |
 | **v1.0.0** | Stable | Production-ready `doctor`, docs freeze, no breaking changes without migration path |
 | **v1.1.0** | Post-1.0 | Env-var interpolation (`${VAR:-default}`), `init` command |

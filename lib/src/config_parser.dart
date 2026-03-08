@@ -4,7 +4,14 @@ import 'package:path/path.dart' as path;
 import 'package:yaml/yaml.dart';
 
 import 'models/flavor_config.dart';
+import 'schema/schema_validator.dart';
 import 'utils/logger.dart';
+
+/// Top-level YAML keys that are reserved for schema metadata.
+///
+/// These keys are skipped when iterating over flavor names so that
+/// e.g. `schema_version: 1` is not treated as a flavor definition.
+const _reservedTopLevelKeys = {'schema_version'};
 
 /// Configuration parser for reading flavor configurations from YAML.
 ///
@@ -142,6 +149,58 @@ final class ConfigParser {
     logger.debug('Configuration validation passed');
   }
 
+  /// Extracts the `schema_version` integer from a raw config YAML map.
+  ///
+  /// [rawConfig] is the full map returned by [_loadConfigYaml] (including
+  /// the `schema_version` key when present alongside the flavor names).
+  ///
+  /// Returns the version as an [int], or `null` if the key is absent.
+  int? extractSchemaVersion(Map<dynamic, dynamic> rawConfig) =>
+      rawConfig['schema_version'] as int?;
+
+  /// Loads the config and returns the parsed `schema_version`, or `null`.
+  ///
+  /// Convenience wrapper around [extractSchemaVersion] that handles file I/O.
+  Future<int?> parseSchemaVersion(
+    String projectRoot, {
+    String? configPath,
+  }) async {
+    final rawConfig = await _loadConfigYaml(projectRoot, configPath);
+    return extractSchemaVersion(rawConfig);
+  }
+
+  /// Validates the structural schema of the config document.
+  ///
+  /// Checks for:
+  /// - Presence of `schema_version` (error in strict mode, warning otherwise).
+  /// - Unknown keys in each flavor block.
+  /// - Deprecated keys in each flavor block.
+  /// - Unknown keys in the `provisioning` sub-block of each flavor.
+  ///
+  /// Returns a [SchemaValidationResult] with all issues grouped by
+  /// global vs. per-flavor and error vs. warning.
+  Future<SchemaValidationResult> validateSchema(
+    String projectRoot, {
+    String? configPath,
+    bool strict = false,
+  }) async {
+    final rawConfig = await _loadConfigYaml(projectRoot, configPath);
+    final schemaVersion = extractSchemaVersion(rawConfig);
+
+    // Build a flavor-only map for the validator (strip reserved top-level keys).
+    final flavorsOnly = Map<dynamic, dynamic>.fromEntries(
+      rawConfig.entries.where(
+        (e) => !_reservedTopLevelKeys.contains(e.key as String),
+      ),
+    );
+
+    return SchemaValidator.validate(
+      flavorsOnly,
+      schemaVersion,
+      strict: strict,
+    );
+  }
+
   /// Extracts the flavor_config section from a YAML document.
   Map<dynamic, dynamic> _extractFlavorConfig(YamlMap yaml) {
     if (yaml.containsKey('flavor_config')) {
@@ -234,6 +293,10 @@ final class ConfigParser {
 
     for (final entry in configYaml.entries) {
       final flavorName = entry.key as String;
+      // Skip reserved top-level keys (e.g. schema_version).
+      if (_reservedTopLevelKeys.contains(flavorName)) {
+        continue;
+      }
       final flavorData = entry.value as Map<dynamic, dynamic>;
 
       logger.debug('Parsing flavor: $flavorName');
@@ -270,6 +333,10 @@ final class ConfigParser {
 
     for (final entry in configYaml.entries) {
       final flavorName = entry.key as String;
+      // Skip reserved top-level keys (e.g. schema_version).
+      if (_reservedTopLevelKeys.contains(flavorName)) {
+        continue;
+      }
       final flavorData = entry.value as Map<dynamic, dynamic>;
       configs[flavorName] = FlavorConfig.fromYaml(flavorName, flavorData);
     }
