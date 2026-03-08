@@ -4,7 +4,6 @@
 /// migration registry.  Only a no-op v1→v1 migration is registered
 /// now as a future-proof scaffold; real migrations will be added in
 /// subsequent releases when breaking config changes are introduced.
-library;
 
 /// Describes a single schema migration step.
 ///
@@ -44,12 +43,19 @@ final class _NoOpV1Migration implements SchemaMigration {
   Map<dynamic, dynamic> migrate(Map<dynamic, dynamic> raw) => raw;
 }
 
-/// Registry of all known [SchemaMigration]s.
+/// Registry of all known [SchemaMigration]s, with a helper for applying them.
 ///
 /// Call [applyMigrations] to advance a raw config map from a given
 /// version to the latest supported version.
+///
+/// Usage:
+/// ```dart
+/// final (migratedMap, finalVersion) =
+///     const SchemaMigrations().applyMigrations(rawMap, fromVersion: 1);
+/// ```
 final class SchemaMigrations {
-  SchemaMigrations._();
+  /// Creates a [SchemaMigrations] instance.
+  const SchemaMigrations();
 
   /// All registered migrations, ordered by [SchemaMigration.fromVersion].
   static const List<SchemaMigration> registered = [
@@ -64,14 +70,7 @@ final class SchemaMigrations {
   ///
   /// Returns the (potentially updated) raw map together with the final
   /// version number.
-  ///
-  /// Example:
-  /// ```dart
-  /// final result = SchemaMigrations.applyMigrations(rawMap, fromVersion: 1);
-  /// final migratedMap = result.$1;
-  /// final finalVersion = result.$2;
-  /// ```
-  static (Map<dynamic, dynamic> raw, int version) applyMigrations(
+  (Map<dynamic, dynamic>, int) applyMigrations(
     Map<dynamic, dynamic> raw, {
     required int fromVersion,
   }) {

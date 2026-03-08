@@ -194,7 +194,7 @@ final class ConfigParser {
       ),
     );
 
-    return SchemaValidator.validate(
+    return const SchemaValidator().validate(
       flavorsOnly,
       schemaVersion,
       strict: strict,

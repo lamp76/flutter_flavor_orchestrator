@@ -54,7 +54,7 @@ void main() {
 
     group('schema_version', () {
       test('non-strict: missing schema_version produces global warning', () {
-        final result = SchemaValidator.validate(
+        final result = const SchemaValidator().validate(
           {'dev': {'bundle_id': 'com.example.dev', 'app_name': 'Dev'}},
           null,
         );
@@ -69,7 +69,7 @@ void main() {
       });
 
       test('strict: missing schema_version produces global error', () {
-        final result = SchemaValidator.validate(
+        final result = const SchemaValidator().validate(
           {'dev': {'bundle_id': 'com.example.dev', 'app_name': 'Dev'}},
           null,
           strict: true,
@@ -82,7 +82,7 @@ void main() {
       });
 
       test('non-strict: present schema_version produces no warnings', () {
-        final result = SchemaValidator.validate(
+        final result = const SchemaValidator().validate(
           {'dev': {'bundle_id': 'com.example.dev', 'app_name': 'Dev'}},
           1,
         );
@@ -92,7 +92,7 @@ void main() {
       });
 
       test('strict: present schema_version produces no errors', () {
-        final result = SchemaValidator.validate(
+        final result = const SchemaValidator().validate(
           {'dev': {'bundle_id': 'com.example.dev', 'app_name': 'Dev'}},
           1,
           strict: true,
@@ -103,12 +103,12 @@ void main() {
       });
 
       test('result stores schemaVersion', () {
-        final result = SchemaValidator.validate({}, 1);
+        final result = const SchemaValidator().validate({}, 1);
         expect(result.schemaVersion, equals(1));
       });
 
       test('result stores null schemaVersion when absent', () {
-        final result = SchemaValidator.validate({}, null);
+        final result = const SchemaValidator().validate({}, null);
         expect(result.schemaVersion, isNull);
       });
     });
@@ -117,7 +117,7 @@ void main() {
 
     group('unknown keys', () {
       test('non-strict: unknown flavor key produces per-flavor warning', () {
-        final result = SchemaValidator.validate(
+        final result = const SchemaValidator().validate(
           {
             'dev': {
               'bundle_id': 'com.example.dev',
@@ -135,7 +135,7 @@ void main() {
       });
 
       test('strict: unknown flavor key produces per-flavor error', () {
-        final result = SchemaValidator.validate(
+        final result = const SchemaValidator().validate(
           {
             'dev': {
               'bundle_id': 'com.example.dev',
@@ -154,7 +154,7 @@ void main() {
       });
 
       test('error message includes actionable key path', () {
-        final result = SchemaValidator.validate(
+        final result = const SchemaValidator().validate(
           {
             'myflav': {
               'bundle_id': 'com.example.myflav',
@@ -173,7 +173,7 @@ void main() {
       });
 
       test('known flavor keys produce no warnings', () {
-        final result = SchemaValidator.validate(
+        final result = const SchemaValidator().validate(
           {
             'dev': {
               'bundle_id': 'com.example.dev',
@@ -202,7 +202,7 @@ void main() {
       });
 
       test('unknown keys detected across multiple flavors independently', () {
-        final result = SchemaValidator.validate(
+        final result = const SchemaValidator().validate(
           {
             'dev': {
               'bundle_id': 'com.example.dev',
@@ -227,7 +227,7 @@ void main() {
 
     group('provisioning sub-keys', () {
       test('non-strict: unknown provisioning key produces warning', () {
-        final result = SchemaValidator.validate(
+        final result = const SchemaValidator().validate(
           {
             'dev': {
               'bundle_id': 'com.example.dev',
@@ -251,7 +251,7 @@ void main() {
       });
 
       test('strict: unknown provisioning key produces error', () {
-        final result = SchemaValidator.validate(
+        final result = const SchemaValidator().validate(
           {
             'dev': {
               'bundle_id': 'com.example.dev',
@@ -276,7 +276,7 @@ void main() {
       });
 
       test('known provisioning keys produce no issues', () {
-        final result = SchemaValidator.validate(
+        final result = const SchemaValidator().validate(
           {
             'dev': {
               'bundle_id': 'com.example.dev',
@@ -302,22 +302,22 @@ void main() {
 
     group('SchemaValidationResult', () {
       test('errorsForFlavor returns empty list for unknown flavor', () {
-        final result = SchemaValidator.validate({'dev': {}}, 1, strict: true);
+        final result = const SchemaValidator().validate({'dev': {}}, 1, strict: true);
         expect(result.errorsForFlavor('nonexistent'), isEmpty);
       });
 
       test('warningsForFlavor returns empty list for unknown flavor', () {
-        final result = SchemaValidator.validate({'dev': {}}, null);
+        final result = const SchemaValidator().validate({'dev': {}}, null);
         expect(result.warningsForFlavor('nonexistent'), isEmpty);
       });
 
       test('hasWarnings is true when globalWarnings present', () {
-        final result = SchemaValidator.validate({'dev': {}}, null);
+        final result = const SchemaValidator().validate({'dev': {}}, null);
         expect(result.hasWarnings, isTrue);
       });
 
       test('hasWarnings is false when no warnings', () {
-        final result = SchemaValidator.validate(
+        final result = const SchemaValidator().validate(
           {
             'dev': {
               'bundle_id': 'com.example.dev',
@@ -330,7 +330,7 @@ void main() {
       });
 
       test('isValid is false when flavorErrors present in strict mode', () {
-        final result = SchemaValidator.validate(
+        final result = const SchemaValidator().validate(
           {
             'dev': {
               'bundle_id': 'com.example.dev',
@@ -371,7 +371,7 @@ void main() {
       };
 
       final (migratedMap, finalVersion) =
-          SchemaMigrations.applyMigrations(raw, fromVersion: 1);
+          const SchemaMigrations().applyMigrations(raw, fromVersion: 1);
 
       expect(finalVersion, equals(1));
       expect(migratedMap, same(raw));
@@ -384,7 +384,7 @@ void main() {
       };
 
       final (migratedMap, finalVersion) =
-          SchemaMigrations.applyMigrations(raw, fromVersion: 99);
+          const SchemaMigrations().applyMigrations(raw, fromVersion: 99);
 
       expect(finalVersion, equals(99));
       expect(migratedMap, same(raw));

@@ -1,15 +1,8 @@
-/// Schema validation utilities for flavor configuration files.
-///
-/// Provides strict and non-strict validation of YAML config structure,
-/// including `schema_version` checking, unknown-key detection, and
-/// deprecated-key warnings with actionable key-path error messages.
-library;
-
 /// Known top-level keys for a flavor configuration block.
 ///
 /// Any key not in this set is considered unknown and will be reported
 /// as an error in strict mode or a warning in non-strict mode.
-const knownFlavorKeys = {
+const Set<String> knownFlavorKeys = {
   'bundle_id',
   'app_name',
   'icon_path',
@@ -28,7 +21,7 @@ const knownFlavorKeys = {
 };
 
 /// Known keys inside the `provisioning` block of a flavor.
-const knownProvisioningKeys = {
+const Set<String> knownProvisioningKeys = {
   'android_google_services',
   'ios_google_service',
   'additional_files',
@@ -39,7 +32,7 @@ const knownProvisioningKeys = {
 /// The map value is a human-readable remediation hint.
 /// In strict mode, deprecated keys are treated as errors.
 /// In non-strict mode, they produce warnings.
-const deprecatedFlavorKeys = <String, String>{
+const Map<String, String> deprecatedFlavorKeys = {
   // Example (not yet applicable):
   // 'old_key': 'Replace `old_key` with `new_key` (see migration guide).',
 };
@@ -112,8 +105,15 @@ final class SchemaValidationResult {
 /// This validator does **not** check semantic correctness (e.g. valid
 /// `bundle_id` format). Semantic validation is handled by
 /// [ConfigParser.validateConfig].
+///
+/// Usage:
+/// ```dart
+/// final result = const SchemaValidator().validate(rawFlavors, schemaVersion);
+/// if (!result.isValid) { /* handle errors */ }
+/// ```
 final class SchemaValidator {
-  const SchemaValidator._();
+  /// Creates a [SchemaValidator].
+  const SchemaValidator();
 
   /// Validates the schema of a raw config document.
   ///
@@ -125,7 +125,7 @@ final class SchemaValidator {
   ///
   /// [strict] controls whether unknown/deprecated keys and a missing
   /// `schema_version` are treated as errors (`true`) or warnings (`false`).
-  static SchemaValidationResult validate(
+  SchemaValidationResult validate(
     Map<dynamic, dynamic> rawFlavors,
     int? schemaVersion, {
     bool strict = false,
@@ -150,12 +150,12 @@ final class SchemaValidator {
     // ── Per-flavor key checks ─────────────────────────────────────────────────
     for (final entry in rawFlavors.entries) {
       final flavorName = entry.key as String;
-      final flavorData = entry.value;
 
       // Guard: skip flavors whose data is not a map (e.g. malformed YAML).
-      if (flavorData is! Map) {
+      if (entry.value is! Map<dynamic, dynamic>) {
         continue;
       }
+      final flavorData = entry.value as Map<dynamic, dynamic>;
 
       final fErrors = <String>[];
       final fWarnings = <String>[];
@@ -181,7 +181,7 @@ final class SchemaValidator {
     );
   }
 
-  static void _validateFlavorKeys(
+  void _validateFlavorKeys(
     String flavorName,
     Map<dynamic, dynamic> flavorData, {
     required List<String> errors,
@@ -211,7 +211,7 @@ final class SchemaValidator {
       }
 
       // ── Provisioning sub-key check ────────────────────────────────────────
-      if (keyStr == 'provisioning' && flavorData[key] is Map) {
+      if (keyStr == 'provisioning' && flavorData[key] is Map<dynamic, dynamic>) {
         final provData = flavorData[key] as Map<dynamic, dynamic>;
         for (final provKey in provData.keys) {
           final provKeyStr = provKey as String;
