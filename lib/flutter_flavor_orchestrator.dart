@@ -22,3 +22,4 @@ export 'src/utils/backup_manager.dart';
 export 'src/utils/conflict_analyzer.dart';
 export 'src/utils/file_manager.dart';
 export 'src/utils/logger.dart';
+export 'src/utils/output_formatter.dart';

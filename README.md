@@ -12,7 +12,27 @@
 
 Build-time orchestration for Flutter flavors across Android and iOS. Configure environment-specific app identity, native metadata, provisioning files, and resource mappings from a single YAML source.
 
-## What's New (v0.6.0)
+## What's New (v0.7.0)
+
+- **`--output json` for all commands** — Every command (`list`, `info`,
+  `validate`, `plan`, `rollback`) now supports `--output json` for
+  machine-readable output, enabling robust CI automation.
+- **Stable JSON top-level keys** — Each command emits a JSON object with a
+  predictable `command` key and command-specific payload keys (see
+  [CLI Usage](#-cli-usage) for details per command).
+- **Silent mode** — When `--output json` is active, logger text output is
+  fully suppressed so only valid JSON appears on `stdout`.
+- **`FlavorConfig.toJson()` / `ProvisioningConfig.toJson()`** — New
+  serialisation methods on the model classes; exported as public API.
+- **`FlavorOrchestrator.getFlavorInfo()`** — Returns the `FlavorConfig` for a
+  flavor without writing any text output (used by `info --output json`).
+- **`FlavorOrchestrator.validateConfigurationsDetailed()`** — Returns
+  per-flavor validation results as a `List<Map<String, Object?>>` (used by
+  `validate --output json`).
+- **`OutputFormat` / `OutputFormatter` / formatter helpers** — New shared
+  utilities exported as public API for downstream programmatic use.
+
+## Previous: What's New (v0.6.0)
 
 - **Conflict detection before `apply`** — Every `apply` run now analyzes the
   execution plan for conflicts before touching any files.  Two classes of
@@ -72,6 +92,7 @@ Build-time orchestration for Flutter flavors across Android and iOS. Configure e
 - **Atomic directory replacement** - Backup/restore-safe replacement of destination directories
 - **Persistent backup & rollback** — Automatic pre-apply snapshots with checksum validation and `rollback` CLI command
 - **Conflict detection** — Pre-apply duplicate-target and overlapping-destination guardrails; `--force` override
+- **Machine-readable JSON output** — `--output json` for all commands (`list`, `info`, `validate`, `plan`, `rollback`); stable top-level keys for CI automation
 - **YAML-driven configuration** - Single declarative config for all flavors
 - **Typed execution plan** - `ExecutionPlan`, `PlannedOperation`, `OperationKind` models with `toJson()`
 - **CLI workflow** - `apply`, `plan`, `rollback`, `list`, `info`, and `validate` commands
@@ -82,7 +103,8 @@ Build-time orchestration for Flutter flavors across Android and iOS. Configure e
 ## 📋 Table of Contents
 
 - [Installation](#installation)
-- [What's New (v0.6.0)](#whats-new-v060)
+- [What's New (v0.7.0)](#whats-new-v070)
+- [Previous: What's New (v0.6.0)](#previous-whats-new-v060)
 - [Previous: What's New (v0.5.0)](#previous-whats-new-v050)
 - [Previous: What's New (v0.4.0)](#previous-whats-new-v040)
 - [Quick Start](#quick-start)
@@ -105,7 +127,7 @@ Add `flutter_flavor_orchestrator` to your `pubspec.yaml` dev dependencies:
 
 ```yaml
 dev_dependencies:
-  flutter_flavor_orchestrator: ^0.6.0
+  flutter_flavor_orchestrator: ^0.7.0
 ```
 
 Then run:
@@ -381,6 +403,9 @@ flutter_flavor_orchestrator rollback --id 20260225_194640123_dev
 
 # Force rollback even if files were manually edited after the last apply
 flutter_flavor_orchestrator rollback --latest --force
+
+# Rollback and get machine-readable result
+flutter_flavor_orchestrator rollback --latest --output json
 ```
 
 Every non-dry-run `apply` automatically creates a snapshot in `.ffo/backups/`
@@ -392,6 +417,16 @@ before touching any files.  The backup stores:
 If files have been manually edited **after** the last apply, `rollback` will
 report a conflict and exit with code `1`.  Pass `--force` to override.
 
+JSON output (`--output json`) returns a stable object:
+- `command` — `"rollback"`
+- `success` — `true`/`false`
+- `backup_id` — identifier of the restored backup
+- `flavor` — flavor name from the backup
+- `files_restored` — number of files restored
+- `new_paths_removed` — number of newly-created paths removed
+
+On failure (no backup found): `command`, `success: false`, `error`.
+
 ### List Command
 
 List all available flavors:
@@ -401,11 +436,16 @@ flutter_flavor_orchestrator list
 
 # List flavors from external YAML
 flutter_flavor_orchestrator list --config ./ci/flavor_config.yaml
+
+# Machine-readable JSON output
+flutter_flavor_orchestrator list --output json
 ```
 
-Output includes, for each flavor:
-- `file_mappings` count
-- `replace_destination_directories` value
+JSON output (`--output json`) returns a stable object:
+- `command` — `"list"`
+- `count` — total number of flavors
+- `flavors` — array of objects, each with `name`, `file_mappings_count`,
+  `replace_destination_directories`
 
 ### Info Command
 
@@ -416,12 +456,16 @@ flutter_flavor_orchestrator info --flavor production
 
 # Inspect a flavor from external YAML
 flutter_flavor_orchestrator info --flavor production --config ./ci/flavor_config.yaml
+
+# Machine-readable JSON output
+flutter_flavor_orchestrator info --flavor production --output json
 ```
 
-Output includes:
-- Full `file_mappings` entries (`destination <- source`)
-- `replace_destination_directories` value
-- Explanation of when directory replacement applies and rollback behavior
+JSON output (`--output json`) returns a stable object:
+- `command` — `"info"`
+- `flavor` — fully-serialised `FlavorConfig` with all fields including
+  `name`, `bundle_id`, `app_name`, `file_mappings`, `file_mappings_count`,
+  `replace_destination_directories`, and any optional fields that are set
 
 ### Validate Command
 
@@ -432,12 +476,19 @@ flutter_flavor_orchestrator validate
 
 # Validate external YAML
 flutter_flavor_orchestrator validate --config ./ci/flavor_config.yaml
+
+# Machine-readable JSON output
+flutter_flavor_orchestrator validate --output json
 ```
 
-Output includes, for each flavor:
-- `file_mappings` count
-- `replace_destination_directories` value
-- A note when directory replacement is enabled for directory mappings
+JSON output (`--output json`) returns a stable object:
+- `command` — `"validate"`
+- `valid` — `true` if all flavors are valid
+- `flavors` — array of per-flavor objects, each with `name`, `valid`,
+  `errors` (list of error strings, empty when valid)
+
+All flavors are evaluated regardless of errors — `--output json` never aborts
+early like text mode does.
 
 ### Help
 
@@ -540,10 +591,10 @@ lib/
 ├── src/
 │   ├── models/              # Data models
 │   │   ├── execution_plan.dart      # Ordered plan of PlannedOperations (v0.3.0)
-│   │   ├── flavor_config.dart
+│   │   ├── flavor_config.dart       # FlavorConfig with toJson() (v0.7.0)
 │   │   ├── operation_kind.dart      # OperationKind enum (v0.3.0)
 │   │   ├── planned_operation.dart   # Single step descriptor (v0.3.0)
-│   │   └── provisioning_config.dart
+│   │   └── provisioning_config.dart # ProvisioningConfig with toJson() (v0.7.0)
 │   ├── processors/          # Platform processors
 │   │   ├── android_processor.dart
 │   │   ├── asset_processor.dart     # planFileMappings() added (v0.3.0)
@@ -552,16 +603,18 @@ lib/
 │   │   ├── backup_manager.dart      # Persistent backup/restore (v0.5.0)
 │   │   ├── conflict_analyzer.dart   # Duplicate/overlap detection (v0.6.0)
 │   │   ├── file_manager.dart
-│   │   └── logger.dart
-│   ├── config_parser.dart  # Configuration parsing
-│   └── orchestrator.dart   # Main orchestrator (_buildExecutionPlan, planFlavor, v0.4.0)
+│   │   ├── logger.dart              # silent mode added (v0.7.0)
+│   │   └── output_formatter.dart    # OutputFormat, OutputFormatter (v0.7.0)
+│   ├── config_parser.dart  # Configuration parsing; parseConfigUnchecked() (v0.7.0)
+│   └── orchestrator.dart   # Main orchestrator; getFlavorInfo(),
+│                           #   validateConfigurationsDetailed(), silent (v0.7.0)
 └── flutter_flavor_orchestrator.dart  # Public API
 ```
 
 ### Key Components
 
 - **FlavorOrchestrator**: Coordinates the entire process; builds an `ExecutionPlan` before applying; runs conflict analysis before any file mutation
-- **ConfigParser**: Parses and validates YAML configurations
+- **ConfigParser**: Parses and validates YAML configurations; `parseConfigUnchecked()` for per-flavor validation (v0.7.0)
 - **AndroidProcessor**: Handles Android-specific modifications
 - **IosProcessor**: Handles iOS-specific modifications
 - **AssetProcessor**: Handles file-mapping copy and planning operations
@@ -569,6 +622,7 @@ lib/
 - **ConflictAnalyzer**: Pre-apply conflict detection — duplicate and overlapping destinations (v0.6.0)
 - **BackupManager**: Persistent pre-apply snapshots with checksum validation and rollback
 - **FileManager**: Provides safe file operations with backup/rollback
+- **OutputFormatter**: `typedef` for result-writing functions; `textOutputFormatter` (no-op), `jsonOutputFormatter` (stdout JSON), `formatterFor()`, `parseOutputFormat()` — all exported as public API (v0.7.0)
 
 ## 📚 Examples
 
@@ -785,12 +839,12 @@ The full roadmap is in [ROADMAP.md](ROADMAP.md). Here is a compact summary of pr
 | **v0.4.0** | `plan` command — preview operations without mutating files; `planFlavor()` public API; `--output json` |
 | **v0.5.0** | `rollback` command + timestamped backup before every non-dry-run apply; `rollbackLatest()` / `rollbackById()` public API |
 | **v0.6.0** | Conflict detection — duplicate-target and overlapping-destination guardrails; `apply --force`; `ConflictAnalyzer` public API |
+| **v0.7.0** | Automation contract — `--output json` for `list`, `info`, `validate`, `plan`, `rollback`; `OutputFormatter` public API; `FlavorConfig.toJson()` |
 
 ### Upcoming
 
 | Version | Theme | Key deliverable |
 |---------|-------|----------------|
-| **v0.7.0** | Automation contract | `--output json` for all commands; standardised exit codes |
 | **v0.8.0** | Schema hardening | `schema_version` enforcement, `validate --strict`, migration scaffold |
 | **v0.9.0** | Diagnostics | `doctor` command with categorised findings (error/warning/info) |
 | **v1.0.0** | Stable | Production-ready `doctor`, docs freeze, no breaking changes without migration path |

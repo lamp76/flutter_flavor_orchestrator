@@ -178,6 +178,33 @@ final class FlavorConfig {
           'replace_destination_directories': replaceDestinationDirectories,
       };
 
+  /// Serialises this config to a JSON-compatible map with stable top-level
+  /// keys.
+  Map<String, Object?> toJson() => {
+        'name': name,
+        'bundle_id': bundleId,
+        'app_name': appName,
+        if (iconPath != null) 'icon_path': iconPath,
+        if (metadata.isNotEmpty) 'metadata': metadata,
+        if (assets.isNotEmpty) 'assets': assets,
+        if (dependencies.isNotEmpty) 'dependencies': dependencies,
+        if (provisioning != null) 'provisioning': provisioning!.toJson(),
+        if (androidMinSdkVersion != null)
+          'android_min_sdk_version': androidMinSdkVersion,
+        if (androidTargetSdkVersion != null)
+          'android_target_sdk_version': androidTargetSdkVersion,
+        if (androidCompileSdkVersion != null)
+          'android_compile_sdk_version': androidCompileSdkVersion,
+        if (iosMinVersion != null) 'ios_min_version': iosMinVersion,
+        if (customGradleConfig != null)
+          'custom_gradle_config': customGradleConfig,
+        if (customInfoPlistEntries.isNotEmpty)
+          'custom_info_plist_entries': customInfoPlistEntries,
+        'file_mappings': fileMappings,
+        'file_mappings_count': fileMappings.length,
+        'replace_destination_directories': replaceDestinationDirectories,
+      };
+
   @override
   String toString() => 'FlavorConfig('
       'name: $name, '

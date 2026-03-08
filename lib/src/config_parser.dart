@@ -36,70 +36,25 @@ final class ConfigParser {
     String projectRoot, {
     String? configPath,
   }) async {
-    logger.debug('Parsing flavor configuration from: $projectRoot');
-
-    Map<dynamic, dynamic> configYaml;
-
-    if (configPath != null && configPath.trim().isNotEmpty) {
-      final resolvedPath = path.isAbsolute(configPath)
-          ? configPath
-          : path.join(projectRoot, configPath);
-      final configFile = File(resolvedPath);
-
-      logger
-        ..debug('Using external configuration file: $resolvedPath')
-        ..info('Loading configuration from: $resolvedPath');
-
-      if (!await configFile.exists()) {
-        throw FileSystemException(
-          'Configuration file not found',
-          resolvedPath,
-        );
-      }
-
-      final content = await configFile.readAsString();
-      final yaml = loadYaml(content) as YamlMap;
-      configYaml = _extractFlavorConfig(yaml);
-    } else {
-      // Try dedicated flavor_config.yaml first
-      final flavorConfigPath = path.join(projectRoot, 'flavor_config.yaml');
-      final flavorConfigFile = File(flavorConfigPath);
-
-      if (await flavorConfigFile.exists()) {
-        logger
-          ..debug('Found flavor_config.yaml')
-          ..info('Loading configuration from: $flavorConfigPath');
-        final content = await flavorConfigFile.readAsString();
-        final yaml = loadYaml(content) as YamlMap;
-        configYaml = _extractFlavorConfig(yaml);
-      } else {
-        // Try pubspec.yaml
-        logger.debug('flavor_config.yaml not found, checking pubspec.yaml');
-        final pubspecPath = path.join(projectRoot, 'pubspec.yaml');
-        final pubspecFile = File(pubspecPath);
-
-        if (!await pubspecFile.exists()) {
-          throw FileSystemException(
-            'No pubspec.yaml found in project root',
-            projectRoot,
-          );
-        }
-
-        final content = await pubspecFile.readAsString();
-        final yaml = loadYaml(content) as YamlMap;
-
-        if (!yaml.containsKey('flavor_config')) {
-          throw const FormatException(
-            'No flavor_config found in pubspec.yaml or flavor_config.yaml',
-          );
-        }
-
-        logger.info('Loading configuration from: $pubspecPath');
-        configYaml = _extractFlavorConfig(yaml);
-      }
-    }
-
+    final configYaml = await _loadConfigYaml(projectRoot, configPath);
     return _parseFlavorConfigs(configYaml);
+  }
+
+  /// Parses all flavor configurations **without** running per-flavor
+  /// validation.
+  ///
+  /// Identical to [parseConfig] except that [validateConfig] is not called
+  /// for each flavor.  This allows the caller to collect per-flavor error
+  /// details (e.g. for `validate --output json`) rather than having the first
+  /// invalid flavor abort the whole parse.
+  ///
+  /// Throws [FileSystemException] if no configuration file is found.
+  Future<Map<String, FlavorConfig>> parseConfigUnchecked(
+    String projectRoot, {
+    String? configPath,
+  }) async {
+    final configYaml = await _loadConfigYaml(projectRoot, configPath);
+    return _parseFlavorConfigsUnchecked(configYaml);
   }
 
   /// Parses a specific flavor configuration from a YAML file.
@@ -199,6 +154,78 @@ final class ConfigParser {
     return yaml;
   }
 
+  /// Loads and extracts the raw YAML config map from the appropriate file.
+  ///
+  /// Looks for `flavor_config.yaml` first, then `pubspec.yaml`, or loads from
+  /// an explicit [configPath] if provided.
+  ///
+  /// Throws [FileSystemException] or [FormatException] on missing/invalid file.
+  Future<Map<dynamic, dynamic>> _loadConfigYaml(
+    String projectRoot,
+    String? configPath,
+  ) async {
+    logger.debug('Parsing flavor configuration from: $projectRoot');
+
+    if (configPath != null && configPath.trim().isNotEmpty) {
+      final resolvedPath = path.isAbsolute(configPath)
+          ? configPath
+          : path.join(projectRoot, configPath);
+      final configFile = File(resolvedPath);
+
+      logger
+        ..debug('Using external configuration file: $resolvedPath')
+        ..info('Loading configuration from: $resolvedPath');
+
+      if (!await configFile.exists()) {
+        throw FileSystemException(
+          'Configuration file not found',
+          resolvedPath,
+        );
+      }
+
+      final content = await configFile.readAsString();
+      final yaml = loadYaml(content) as YamlMap;
+      return _extractFlavorConfig(yaml);
+    }
+
+    // Try dedicated flavor_config.yaml first
+    final flavorConfigPath = path.join(projectRoot, 'flavor_config.yaml');
+    final flavorConfigFile = File(flavorConfigPath);
+
+    if (await flavorConfigFile.exists()) {
+      logger
+        ..debug('Found flavor_config.yaml')
+        ..info('Loading configuration from: $flavorConfigPath');
+      final content = await flavorConfigFile.readAsString();
+      final yaml = loadYaml(content) as YamlMap;
+      return _extractFlavorConfig(yaml);
+    }
+
+    // Try pubspec.yaml
+    logger.debug('flavor_config.yaml not found, checking pubspec.yaml');
+    final pubspecPath = path.join(projectRoot, 'pubspec.yaml');
+    final pubspecFile = File(pubspecPath);
+
+    if (!await pubspecFile.exists()) {
+      throw FileSystemException(
+        'No pubspec.yaml found in project root',
+        projectRoot,
+      );
+    }
+
+    final content = await pubspecFile.readAsString();
+    final yaml = loadYaml(content) as YamlMap;
+
+    if (!yaml.containsKey('flavor_config')) {
+      throw const FormatException(
+        'No flavor_config found in pubspec.yaml or flavor_config.yaml',
+      );
+    }
+
+    logger.info('Loading configuration from: $pubspecPath');
+    return _extractFlavorConfig(yaml);
+  }
+
   /// Parses all flavor configurations from a YAML map.
   Map<String, FlavorConfig> _parseFlavorConfigs(
     Map<dynamic, dynamic> configYaml,
@@ -227,6 +254,25 @@ final class ConfigParser {
 
     logger.info('Successfully parsed ${configs.length} flavor(s): '
         '${configs.keys.join(', ')}');
+
+    return configs;
+  }
+
+  /// Parses all flavor configurations from a YAML map **without** running
+  /// validation on each flavor.
+  ///
+  /// Use this when you need the raw [FlavorConfig] objects so that you can
+  /// validate them individually (e.g. to collect per-flavor error details).
+  Map<String, FlavorConfig> _parseFlavorConfigsUnchecked(
+    Map<dynamic, dynamic> configYaml,
+  ) {
+    final configs = <String, FlavorConfig>{};
+
+    for (final entry in configYaml.entries) {
+      final flavorName = entry.key as String;
+      final flavorData = entry.value as Map<dynamic, dynamic>;
+      configs[flavorName] = FlavorConfig.fromYaml(flavorName, flavorData);
+    }
 
     return configs;
   }

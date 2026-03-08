@@ -21,12 +21,16 @@ final class FlavorOrchestrator {
   ///
   /// [projectRoot] is the root directory of the Flutter project.
   /// [verbose] enables detailed debug logging.
+  /// [silent] suppresses all logger output (used for JSON output mode).
   FlavorOrchestrator({
     required this.projectRoot,
     this.configPath,
     this.verbose = false,
-  })  : logger = Logger(verbose: verbose),
-        fileManager = FileManager(logger: Logger(verbose: verbose)) {
+    this.silent = false,
+  })  : logger = Logger(verbose: verbose, silent: silent),
+        fileManager = FileManager(
+          logger: Logger(verbose: verbose, silent: silent),
+        ) {
     configParser = ConfigParser(logger: logger);
     androidProcessor = AndroidProcessor(
       fileManager: fileManager,
@@ -55,6 +59,9 @@ final class FlavorOrchestrator {
 
   /// Whether to show verbose debug output.
   final bool verbose;
+
+  /// Whether to suppress all logger output (used for JSON output mode).
+  final bool silent;
 
   /// Logger instance for output.
   late final Logger logger;
@@ -287,6 +294,57 @@ final class FlavorOrchestrator {
     } on FileSystemException {
       rethrow;
     }
+  }
+
+  /// Returns the [FlavorConfig] for [flavorName] without printing anything.
+  ///
+  /// Use this method when you need the raw config data (e.g. for JSON output)
+  /// rather than human-readable text.  Unlike [showFlavorInfo], this method
+  /// does not write any output — it simply parses and returns the config.
+  ///
+  /// Throws [FormatException] if the flavor is not found or config is invalid.
+  Future<FlavorConfig> getFlavorInfo(String flavorName) =>
+      configParser.parseFlavorConfig(
+        projectRoot,
+        flavorName,
+        configPath: configPath,
+      );
+
+  /// Returns per-flavor validation results as a structured list.
+  ///
+  /// Each entry in the returned list is a map with the following stable keys:
+  /// - `name` — flavor name
+  /// - `valid` — `true` if validation passed
+  /// - `errors` — list of error message strings (empty when valid)
+  ///
+  /// This method is the data source for `validate --output json`.  For
+  /// human-readable output, use [validateConfigurations] instead.
+  ///
+  /// Unlike [validateConfigurations], this method does **not** abort on the
+  /// first invalid flavor — it processes every flavor and collects all results.
+  Future<List<Map<String, Object?>>> validateConfigurationsDetailed() async {
+    // Use unchecked parse so that invalid flavors do not abort the loop.
+    final configs = await configParser.parseConfigUnchecked(
+      projectRoot,
+      configPath: configPath,
+    );
+
+    final results = <Map<String, Object?>>[];
+
+    for (final config in configs.values) {
+      try {
+        configParser.validateConfig(config);
+        results.add({'name': config.name, 'valid': true, 'errors': <String>[]});
+      } on FormatException catch (e) {
+        results.add({
+          'name': config.name,
+          'valid': false,
+          'errors': [e.message],
+        });
+      }
+    }
+
+    return results;
   }
 
   /// Validates all flavor configurations.

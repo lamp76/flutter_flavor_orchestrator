@@ -5,6 +5,7 @@ import 'package:flutter_flavor_orchestrator/flutter_flavor_orchestrator.dart';
 
 const _externalConfigHelp = 'Path to an external YAML config file '
     '(absolute or relative to project root).';
+const _outputHelp = 'Output format: text (default) or json.';
 
 /// CLI entry point for the Flutter Flavor Orchestrator.
 ///
@@ -151,6 +152,13 @@ ArgParser _buildListCommand() => ArgParser()
     abbr: 'c',
     help: _externalConfigHelp,
   )
+  ..addOption(
+    'output',
+    abbr: 'o',
+    allowed: ['text', 'json'],
+    defaultsTo: 'text',
+    help: _outputHelp,
+  )
   ..addFlag(
     'verbose',
     negatable: false,
@@ -169,6 +177,13 @@ ArgParser _buildInfoCommand() => ArgParser()
     'config',
     abbr: 'c',
     help: _externalConfigHelp,
+  )
+  ..addOption(
+    'output',
+    abbr: 'o',
+    allowed: ['text', 'json'],
+    defaultsTo: 'text',
+    help: _outputHelp,
   )
   ..addFlag(
     'verbose',
@@ -216,6 +231,13 @@ ArgParser _buildValidateCommand() => ArgParser()
     abbr: 'c',
     help: _externalConfigHelp,
   )
+  ..addOption(
+    'output',
+    abbr: 'o',
+    allowed: ['text', 'json'],
+    defaultsTo: 'text',
+    help: _outputHelp,
+  )
   ..addFlag(
     'verbose',
     negatable: false,
@@ -238,6 +260,13 @@ ArgParser _buildRollbackCommand() => ArgParser()
     negatable: false,
     help:
         'Override checksum conflicts caused by manual edits after apply.',
+  )
+  ..addOption(
+    'output',
+    abbr: 'o',
+    allowed: ['text', 'json'],
+    defaultsTo: 'text',
+    help: _outputHelp,
   )
   ..addFlag(
     'verbose',
@@ -296,16 +325,43 @@ Future<void> _handleListCommand(
 ) async {
   final verbose = command['verbose'] as bool;
   final configPath = command['config'] as String?;
+  final outputFormat = parseOutputFormat(command['output'] as String);
+  final isJson = outputFormat == OutputFormat.json;
 
   final orchestrator = FlavorOrchestrator(
     projectRoot: projectRoot,
     configPath: configPath,
     verbose: verbose,
+    silent: isJson,
   );
 
   try {
-    final flavors = await orchestrator.listFlavors();
-    exit(flavors.isNotEmpty ? 0 : 1);
+    if (isJson) {
+      // In JSON mode collect rich per-flavor data and write a single payload.
+      final configs = await orchestrator.configParser.parseConfig(
+        projectRoot,
+        configPath: configPath,
+      );
+      final flavors = (configs.keys.toList()..sort())
+          .map(
+            (name) => {
+              'name': name,
+              'file_mappings_count': configs[name]!.fileMappings.length,
+              'replace_destination_directories':
+                  configs[name]!.replaceDestinationDirectories,
+            },
+          )
+          .toList();
+      formatterFor(outputFormat)({
+        'command': 'list',
+        'count': flavors.length,
+        'flavors': flavors,
+      });
+      exit(flavors.isNotEmpty ? 0 : 1);
+    } else {
+      final flavors = await orchestrator.listFlavors();
+      exit(flavors.isNotEmpty ? 0 : 1);
+    }
   } on FormatException catch (e) {
     stderr.writeln('Error: ${e.message}');
     exit(1);
@@ -332,15 +388,26 @@ Future<void> _handleInfoCommand(
 
   final verbose = command['verbose'] as bool;
   final configPath = command['config'] as String?;
+  final outputFormat = parseOutputFormat(command['output'] as String);
+  final isJson = outputFormat == OutputFormat.json;
 
   final orchestrator = FlavorOrchestrator(
     projectRoot: projectRoot,
     configPath: configPath,
     verbose: verbose,
+    silent: isJson,
   );
 
   try {
-    await orchestrator.showFlavorInfo(flavor);
+    if (isJson) {
+      final config = await orchestrator.getFlavorInfo(flavor);
+      formatterFor(outputFormat)({
+        'command': 'info',
+        'flavor': config.toJson(),
+      });
+    } else {
+      await orchestrator.showFlavorInfo(flavor);
+    }
     exit(0);
   } on FormatException catch (e) {
     stderr.writeln('Error: ${e.message}');
@@ -355,16 +422,31 @@ Future<void> _handleValidateCommand(
 ) async {
   final verbose = command['verbose'] as bool;
   final configPath = command['config'] as String?;
+  final outputFormat = parseOutputFormat(command['output'] as String);
+  final isJson = outputFormat == OutputFormat.json;
 
   final orchestrator = FlavorOrchestrator(
     projectRoot: projectRoot,
     configPath: configPath,
     verbose: verbose,
+    silent: isJson,
   );
 
   try {
-    final valid = await orchestrator.validateConfigurations();
-    exit(valid ? 0 : 1);
+    if (isJson) {
+      final results = await orchestrator.validateConfigurationsDetailed();
+      final allValid = results.isNotEmpty &&
+          results.every((r) => r['valid'] as bool);
+      formatterFor(outputFormat)({
+        'command': 'validate',
+        'valid': allValid,
+        'flavors': results,
+      });
+      exit(allValid ? 0 : 1);
+    } else {
+      final valid = await orchestrator.validateConfigurations();
+      exit(valid ? 0 : 1);
+    }
   } on FormatException catch (e) {
     stderr.writeln('Error: ${e.message}');
     exit(1);
@@ -379,20 +461,65 @@ Future<void> _handleRollbackCommand(
   final verbose = command['verbose'] as bool;
   final force = command['force'] as bool;
   final id = command['id'] as String?;
+  final outputFormat = parseOutputFormat(command['output'] as String);
+  final isJson = outputFormat == OutputFormat.json;
 
   final orchestrator = FlavorOrchestrator(
     projectRoot: projectRoot,
     verbose: verbose,
+    silent: isJson,
   );
 
   try {
-    final bool success;
-    if (id != null && id.isNotEmpty) {
-      success = await orchestrator.rollbackById(id, force: force);
+    if (isJson) {
+      // Resolve the backup record first so we can include its metadata in the
+      // JSON payload regardless of success or failure.
+      BackupRecord? record;
+      if (id != null && id.isNotEmpty) {
+        final all = await orchestrator.listBackups();
+        for (final r in all) {
+          if (r.id == id) {
+            record = r;
+            break;
+          }
+        }
+      } else {
+        record = await orchestrator.backupManager.latestBackup();
+      }
+
+      if (record == null) {
+        formatterFor(outputFormat)({
+          'command': 'rollback',
+          'success': false,
+          'error': id != null
+              ? 'Backup not found: $id'
+              : 'No backups found. Run `apply` first to create a backup.',
+        });
+        exit(1);
+      }
+
+      final success = await orchestrator.backupManager.restore(
+        record,
+        force: force,
+      );
+      formatterFor(outputFormat)({
+        'command': 'rollback',
+        'success': success,
+        'backup_id': record.id,
+        'flavor': record.flavorName,
+        'files_restored': record.entries.length,
+        'new_paths_removed': record.newPaths.length,
+      });
+      exit(success ? 0 : 1);
     } else {
-      success = await orchestrator.rollbackLatest(force: force);
+      final bool success;
+      if (id != null && id.isNotEmpty) {
+        success = await orchestrator.rollbackById(id, force: force);
+      } else {
+        success = await orchestrator.rollbackLatest(force: force);
+      }
+      exit(success ? 0 : 1);
     }
-    exit(success ? 0 : 1);
   } on FileSystemException catch (e) {
     stderr.writeln('Error: ${e.message}');
     exit(1);
@@ -417,12 +544,14 @@ Future<void> _handlePlanCommand(
   final platforms = command['platform'] as List<String>;
   final verbose = command['verbose'] as bool;
   final configPath = command['config'] as String?;
-  final outputFormat = command['output'] as String;
+  final outputFormat = parseOutputFormat(command['output'] as String);
+  final isJson = outputFormat == OutputFormat.json;
 
   final orchestrator = FlavorOrchestrator(
     projectRoot: projectRoot,
     configPath: configPath,
     verbose: verbose,
+    silent: isJson,
   );
 
   try {
@@ -431,7 +560,7 @@ Future<void> _handlePlanCommand(
       platforms: platforms,
     );
 
-    if (outputFormat == 'json') {
+    if (isJson) {
       stdout.writeln(jsonEncode(plan.toJson()));
     } else {
       _printPlanText(plan);
@@ -552,8 +681,14 @@ EXAMPLES:
   # List available flavors
   flutter_flavor_orchestrator list
 
+  # List flavors as machine-readable JSON
+  flutter_flavor_orchestrator list --output json
+
   # Show detailed flavor information
   flutter_flavor_orchestrator info --flavor staging
+
+  # Show flavor information as JSON
+  flutter_flavor_orchestrator info --flavor staging --output json
 
   # Show file mapping details and replacement mode for a flavor
   flutter_flavor_orchestrator info --flavor dev
@@ -561,8 +696,14 @@ EXAMPLES:
   # Validate all configurations
   flutter_flavor_orchestrator validate
 
+  # Validate and emit machine-readable JSON result
+  flutter_flavor_orchestrator validate --output json
+
   # Validate using an external YAML config file
   flutter_flavor_orchestrator validate --config /secure/jenkins/flavor_config.yaml
+
+  # Rollback and get JSON result
+  flutter_flavor_orchestrator rollback --latest --output json
 
 For more information, visit:
 https://github.com/lamp76/flutter_flavor_orchestrator
@@ -571,5 +712,5 @@ https://github.com/lamp76/flutter_flavor_orchestrator
 
 /// Prints version information.
 void _printVersion() {
-  stdout.writeln('Flutter Flavor Orchestrator v0.6.0');
+  stdout.writeln('Flutter Flavor Orchestrator v0.7.0');
 }
