@@ -96,9 +96,9 @@ dev:
       );
       await manifestFile.create(recursive: true);
       await manifestFile.writeAsString(
-        '<?xml version="1.0" encoding="utf-8"?>'
-        '<manifest package="com.example.dev">'
-        '<application android:label="App Dev"></application>'
+        '<?xml version="1.0" encoding="utf-8"?>\n'
+        '<manifest package="com.example.dev">\n'
+        '<application android:label="App Dev"></application>\n'
         '</manifest>',
       );
       final gradleFile =

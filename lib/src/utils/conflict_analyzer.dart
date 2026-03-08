@@ -93,9 +93,13 @@ final class ConflictAnalyzer {
     final duplicates = <String>{};
 
     for (final op in plan.operations) {
-      if (op.kind == OperationKind.skip) continue;
+      if (op.kind == OperationKind.skip) {
+        continue;
+      }
       final dst = op.destinationPath;
-      if (dst == null) continue;
+      if (dst == null) {
+        continue;
+      }
 
       if (!seen.add(dst)) {
         duplicates.add(dst);

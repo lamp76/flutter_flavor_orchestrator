@@ -138,11 +138,10 @@ final class FlavorOrchestrator {
       final conflicts = const ConflictAnalyzer().analyze(plan);
       if (conflicts.isNotEmpty) {
         if (!force) {
-          logger
-            ..error(
-              'Conflict detection failed: ${conflicts.length} conflict(s) '
-              'found. Use --force to override.',
-            );
+          logger.error(
+            'Conflict detection failed: ${conflicts.length} conflict(s) '
+            'found. Use --force to override.',
+          );
           for (final conflict in conflicts) {
             logger.error('  [${conflict.code}] ${conflict.message}');
           }

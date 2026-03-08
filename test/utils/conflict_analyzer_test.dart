@@ -12,13 +12,13 @@ ExecutionPlan _plan(List<PlannedOperation> ops) => ExecutionPlan(
 void main() {
   group('ConflictAnalyzer.analyze', () {
     test('returns empty list for plan with no operations', () {
-      final analyzer = const ConflictAnalyzer();
+      const analyzer = ConflictAnalyzer();
       final conflicts = analyzer.analyze(_plan([]));
       expect(conflicts, isEmpty);
     });
 
     test('returns empty list for plan with unique destination paths', () {
-      final analyzer = const ConflictAnalyzer();
+      const analyzer = ConflictAnalyzer();
       final conflicts = analyzer.analyze(
         _plan([
           const PlannedOperation(
@@ -46,7 +46,7 @@ void main() {
     });
 
     test('detects duplicate destination paths', () {
-      final analyzer = const ConflictAnalyzer();
+      const analyzer = ConflictAnalyzer();
       final conflicts = analyzer.analyze(
         _plan([
           const PlannedOperation(
@@ -75,7 +75,7 @@ void main() {
     });
 
     test('detects overlapping destinations (parent and child)', () {
-      final analyzer = const ConflictAnalyzer();
+      const analyzer = ConflictAnalyzer();
       final conflicts = analyzer.analyze(
         _plan([
           const PlannedOperation(
@@ -104,7 +104,7 @@ void main() {
     });
 
     test('detects overlapping destinations (child before parent)', () {
-      final analyzer = const ConflictAnalyzer();
+      const analyzer = ConflictAnalyzer();
       final conflicts = analyzer.analyze(
         _plan([
           const PlannedOperation(
@@ -128,7 +128,7 @@ void main() {
     });
 
     test('skip operations are excluded from conflict detection', () {
-      final analyzer = const ConflictAnalyzer();
+      const analyzer = ConflictAnalyzer();
       final conflicts = analyzer.analyze(
         _plan([
           // Two skip ops with the same destination — not a real conflict
@@ -151,7 +151,7 @@ void main() {
 
     test('operations without destination paths do not cause false positives',
         () {
-      final analyzer = const ConflictAnalyzer();
+      const analyzer = ConflictAnalyzer();
       final conflicts = analyzer.analyze(
         _plan([
           const PlannedOperation(
@@ -172,7 +172,7 @@ void main() {
     });
 
     test('does not emit duplicate overlap reports for the same path pair', () {
-      final analyzer = const ConflictAnalyzer();
+      const analyzer = ConflictAnalyzer();
       // Three operations: A overlaps with B and C, but only one report per pair
       final conflicts = analyzer.analyze(
         _plan([
@@ -217,7 +217,7 @@ void main() {
       expect(json, containsPair('severity', 'error'));
       expect(json, containsPair('message', 'test message'));
       expect(json, contains('conflicting_paths'));
-      expect(json['conflicting_paths'], isA<List>());
+      expect(json['conflicting_paths'], isA<List<String>>());
     });
 
     test('ConflictReport.toString includes code and message', () {
@@ -233,7 +233,7 @@ void main() {
 
     test('no overlap reported for paths that share a prefix but are siblings',
         () {
-      final analyzer = const ConflictAnalyzer();
+      const analyzer = ConflictAnalyzer();
       // lib/config and lib/core share the 'lib' prefix in their string
       // representation, but neither is a parent of the other.
       final conflicts = analyzer.analyze(
