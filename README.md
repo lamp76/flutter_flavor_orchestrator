@@ -14,12 +14,15 @@ Build-time orchestration for Flutter flavors across Android and iOS. Configure e
 
 ## What's New (v0.7.0)
 
-- **`--output json` for all commands** — Every command (`list`, `info`,
+- **`--output json` for all commands** — Every command (`apply`, `list`, `info`,
   `validate`, `plan`, `rollback`) now supports `--output json` for
   machine-readable output, enabling robust CI automation.
 - **Stable JSON top-level keys** — Each command emits a JSON object with a
   predictable `command` key and command-specific payload keys (see
   [CLI Usage](#-cli-usage) for details per command).
+- **`apply --output json`** — Returns `command`, `success`, `flavor`,
+  `platforms`, `dry_run`, `backup_id` (when applicable), and `conflicts` /
+  `error` (when applicable).
 - **Silent mode** — When `--output json` is active, logger text output is
   fully suppressed so only valid JSON appears on `stdout`.
 - **`FlavorConfig.toJson()` / `ProvisioningConfig.toJson()`** — New
@@ -355,6 +358,9 @@ flutter_flavor_orchestrator apply --flavor dev --force
 
 # Enable verbose output
 flutter_flavor_orchestrator apply --flavor dev --verbose
+
+# Machine-readable JSON result
+flutter_flavor_orchestrator apply --flavor dev --output json
 ```
 
 Output includes:
@@ -362,6 +368,17 @@ Output includes:
 - `replace_destination_directories` value
 - Mapping details (`destination <- source`) when `--verbose` is enabled
 - In `--dry-run`, all operations are validated and no files are modified
+
+JSON output (`--output json`) returns a stable object:
+- `command` — `"apply"`
+- `success` — `true`/`false`
+- `flavor` — the applied flavor name
+- `platforms` — list of target platforms
+- `dry_run` — whether dry-run mode was active
+- `backup_id` — backup identifier created before the apply (omitted in dry-run)
+- `conflicts` — list of conflict descriptors if any were detected (omitted when
+  none)
+- `error` — error message (only present on failure)
 
 ### Plan Command
 

@@ -80,6 +80,11 @@ Apply production flavor to iOS only:
 flutter_flavor_orchestrator apply --flavor production --platform ios
 ```
 
+Get machine-readable JSON result (great for CI pipelines):
+```bash
+flutter_flavor_orchestrator apply --flavor dev --output json
+```
+
 ### 4. Preview Operations (Plan)
 
 Preview what would be applied without mutating any files:

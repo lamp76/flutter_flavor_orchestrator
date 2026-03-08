@@ -139,6 +139,13 @@ ArgParser _buildApplyCommand() => ArgParser()
     negatable: false,
     help: 'Override conflict-detection guardrails and apply anyway.',
   )
+  ..addOption(
+    'output',
+    abbr: 'o',
+    allowed: ['text', 'json'],
+    defaultsTo: 'text',
+    help: _outputHelp,
+  )
   ..addFlag(
     'verbose',
     negatable: false,
@@ -294,21 +301,35 @@ Future<void> _handleApplyCommand(
   final configPath = command['config'] as String?;
   final dryRun = command['dry-run'] as bool;
   final force = command['force'] as bool;
+  final outputFormat = parseOutputFormat(command['output'] as String);
+  final isJson = outputFormat == OutputFormat.json;
 
   final orchestrator = FlavorOrchestrator(
     projectRoot: projectRoot,
     configPath: configPath,
     verbose: verbose,
+    silent: isJson,
   );
 
   try {
-    final success = await orchestrator.applyFlavor(
-      flavor,
-      platforms: platforms,
-      dryRun: dryRun,
-      force: force,
-    );
-    exit(success ? 0 : 1);
+    if (isJson) {
+      final result = await orchestrator.applyFlavorDetailed(
+        flavor,
+        platforms: platforms,
+        dryRun: dryRun,
+        force: force,
+      );
+      formatterFor(outputFormat)({'command': 'apply', ...result});
+      exit((result['success'] as bool) ? 0 : 1);
+    } else {
+      final success = await orchestrator.applyFlavor(
+        flavor,
+        platforms: platforms,
+        dryRun: dryRun,
+        force: force,
+      );
+      exit(success ? 0 : 1);
+    }
   } on FormatException catch (e) {
     stderr.writeln('Error: ${e.message}');
     exit(1);
@@ -659,6 +680,9 @@ EXAMPLES:
 
   # Override conflict guardrails and apply anyway
   flutter_flavor_orchestrator apply --flavor dev --force
+
+  # Apply and get machine-readable JSON result
+  flutter_flavor_orchestrator apply --flavor dev --output json
 
   # Preview operations without mutating files
   flutter_flavor_orchestrator plan --flavor dev

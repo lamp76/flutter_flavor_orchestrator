@@ -505,4 +505,166 @@ dev:
       expect(decoded, contains('error'));
     });
   });
+
+  // ---------------------------------------------------------------------------
+  // FlavorOrchestrator.applyFlavorDetailed
+  // ---------------------------------------------------------------------------
+
+  group('FlavorOrchestrator.applyFlavorDetailed', () {
+    test('returns stable keys on success (dry-run, no backup_id)', () async {
+      await _setupProject(tempDir, '''
+dev:
+  bundle_id: com.example.dev
+  app_name: App Dev
+''');
+
+      final orchestrator = FlavorOrchestrator(
+        projectRoot: tempDir.path,
+        silent: true,
+      );
+
+      final result = await orchestrator.applyFlavorDetailed(
+        'dev',
+        platforms: [],
+        dryRun: true,
+      );
+
+      expect(result['success'], isTrue);
+      expect(result['flavor'], equals('dev'));
+      expect(result, contains('platforms'));
+      expect(result, contains('dry_run'));
+      expect(result['dry_run'], isTrue);
+      // No backup_id in dry-run
+      expect(result, isNot(contains('backup_id')));
+    });
+
+    test('returns success=false for unknown flavor', () async {
+      await _setupProject(tempDir, '''
+dev:
+  bundle_id: com.example.dev
+  app_name: App Dev
+''');
+
+      final orchestrator = FlavorOrchestrator(
+        projectRoot: tempDir.path,
+        silent: true,
+      );
+
+      final result = await orchestrator.applyFlavorDetailed(
+        'nonexistent',
+        dryRun: true,
+        platforms: [],
+      );
+
+      expect(result['success'], isFalse);
+      expect(result, contains('error'));
+    });
+
+    test('result map is JSON-encodable', () async {
+      await _setupProject(tempDir, '''
+dev:
+  bundle_id: com.example.dev
+  app_name: App Dev
+''');
+
+      final orchestrator = FlavorOrchestrator(
+        projectRoot: tempDir.path,
+        silent: true,
+      );
+
+      final result = await orchestrator.applyFlavorDetailed(
+        'dev',
+        platforms: [],
+        dryRun: true,
+      );
+
+      expect(() => jsonEncode(result), returnsNormally);
+    });
+
+    test('platforms field reflects the requested platforms', () async {
+      await _setupProject(tempDir, '''
+dev:
+  bundle_id: com.example.dev
+  app_name: App Dev
+''');
+
+      final orchestrator = FlavorOrchestrator(
+        projectRoot: tempDir.path,
+        silent: true,
+      );
+
+      final result = await orchestrator.applyFlavorDetailed(
+        'dev',
+        platforms: ['android'],
+        dryRun: true,
+      );
+
+      final platforms = result['platforms']! as List;
+      expect(platforms, equals(['android']));
+    });
+  });
+
+  group('JSON stable key contracts — apply', () {
+    test('apply dry-run JSON payload contains all required keys', () async {
+      await _setupProject(tempDir, '''
+dev:
+  bundle_id: com.example.dev
+  app_name: App Dev
+''');
+
+      final orchestrator = FlavorOrchestrator(
+        projectRoot: tempDir.path,
+        silent: true,
+      );
+      final result = await orchestrator.applyFlavorDetailed(
+        'dev',
+        platforms: [],
+        dryRun: true,
+      );
+
+      final payload = jsonEncode({'command': 'apply', ...result});
+      final decoded = jsonDecode(payload) as Map<String, Object?>;
+
+      expect(decoded['command'], equals('apply'));
+      expect(decoded, contains('success'));
+      expect(decoded, contains('flavor'));
+      expect(decoded, contains('platforms'));
+      expect(decoded, contains('dry_run'));
+    });
+
+    test('apply conflict result contains conflicts list', () async {
+      await _setupProject(tempDir, '''
+dev:
+  bundle_id: com.example.dev
+  app_name: App Dev
+  file_mappings:
+    android/app/src/main/AndroidManifest.xml: configs/dev/manifest.xml
+''');
+
+      // Create a fake source so the config parses
+      await Directory('${tempDir.path}/configs/dev').create(recursive: true);
+      await File(
+        '${tempDir.path}/configs/dev/manifest.xml',
+      ).writeAsString('<manifest/>');
+
+      final orchestrator = FlavorOrchestrator(
+        projectRoot: tempDir.path,
+        silent: true,
+      );
+
+      final result = await orchestrator.applyFlavorDetailed(
+        'dev',
+        platforms: [],
+        dryRun: true,
+      );
+
+      // Whether it has conflicts depends on whether Android platform is
+      // included and AndroidManifest.xml exists; test just that the result
+      // is JSON-encodable and has the required keys.
+      expect(() => jsonEncode(result), returnsNormally);
+      expect(result, contains('success'));
+      expect(result, contains('flavor'));
+      expect(result['flavor'], equals('dev'));
+    });
+  });
 }

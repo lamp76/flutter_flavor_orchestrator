@@ -105,6 +105,36 @@ final class FlavorOrchestrator {
     bool dryRun = false,
     bool force = false,
   }) async {
+    final result = await applyFlavorDetailed(
+      flavorName,
+      platforms: platforms,
+      dryRun: dryRun,
+      force: force,
+    );
+    return result['success'] as bool;
+  }
+
+  /// Applies a flavor and returns a structured result map.
+  ///
+  /// Functionally identical to [applyFlavor] but returns a
+  /// `Map<String, Object?>` with stable top-level keys suitable for JSON
+  /// serialisation:
+  ///
+  /// - `success` — `true` if the operation succeeded
+  /// - `flavor` — the flavor name
+  /// - `platforms` — the target platforms list
+  /// - `dry_run` — whether dry-run mode was active
+  /// - `backup_id` — backup identifier created before the apply (omitted in
+  ///   dry-run or when no backup was created)
+  /// - `conflicts` — list of conflict descriptors if any were detected
+  ///   (each entry is a `ConflictReport.toJson()` map)
+  /// - `error` — error message string (only present on failure)
+  Future<Map<String, Object?>> applyFlavorDetailed(
+    String flavorName, {
+    List<String> platforms = const ['android', 'ios'],
+    bool dryRun = false,
+    bool force = false,
+  }) async {
     try {
       fileManager.dryRun = dryRun;
 
@@ -117,7 +147,14 @@ final class FlavorOrchestrator {
 
       // Validate project root
       if (!await _validateProjectRoot()) {
-        return false;
+        return {
+          'success': false,
+          'flavor': flavorName,
+          'platforms': platforms,
+          'dry_run': dryRun,
+          'error': 'Not a valid Flutter project (pubspec.yaml not found '
+              'or missing flutter section)',
+        };
       }
 
       // Parse configuration
@@ -143,6 +180,9 @@ final class FlavorOrchestrator {
 
       // Run conflict analysis before any file mutations.
       final conflicts = const ConflictAnalyzer().analyze(plan);
+      final conflictJsonList =
+          conflicts.map((c) => c.toJson()).toList();
+
       if (conflicts.isNotEmpty) {
         if (!force) {
           logger.error(
@@ -152,7 +192,16 @@ final class FlavorOrchestrator {
           for (final conflict in conflicts) {
             logger.error('  [${conflict.code}] ${conflict.message}');
           }
-          return false;
+          return {
+            'success': false,
+            'flavor': flavorName,
+            'platforms': platforms,
+            'dry_run': dryRun,
+            'conflicts': conflictJsonList,
+            'error':
+                'Conflict detection failed: ${conflicts.length} conflict(s) '
+                'found. Use --force to override.',
+          };
         } else {
           logger.warning(
             'Conflicts detected (continuing due to --force):',
@@ -209,7 +258,14 @@ final class FlavorOrchestrator {
           ..info('  4. Build your app with the new configuration');
       }
 
-      return true;
+      return {
+        'success': true,
+        'flavor': flavorName,
+        'platforms': platforms,
+        'dry_run': dryRun,
+        if (backupRecord != null) 'backup_id': backupRecord.id,
+        if (conflictJsonList.isNotEmpty) 'conflicts': conflictJsonList,
+      };
     } on Exception catch (e, stackTrace) {
       logger.error('Failed to apply flavor', e, stackTrace);
 
@@ -224,7 +280,13 @@ final class FlavorOrchestrator {
         );
       }
 
-      return false;
+      return {
+        'success': false,
+        'flavor': flavorName,
+        'platforms': platforms,
+        'dry_run': dryRun,
+        'error': e.toString(),
+      };
     }
   }
 

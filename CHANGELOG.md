@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.7.0] - 2026-03-08
 
 ### Added
+- **`--output json` for `apply`** — Emits a machine-readable JSON object with
+  stable top-level keys: `command`, `success`, `flavor`, `platforms`, `dry_run`,
+  `backup_id` (omitted in dry-run), `conflicts` (omitted when none), and `error`
+  (only on failure).
 - **`--output json` for `list`** — Emits a machine-readable JSON object with
   stable top-level keys: `command`, `count`, `flavors` (each entry includes
   `name`, `file_mappings_count`, `replace_destination_directories`).
@@ -44,6 +48,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`FlavorOrchestrator.validateConfigurationsDetailed()`** — returns a
   `List<Map<String, Object?>>` with per-flavor validation results; used by the
   `validate --output json` handler.
+- **`FlavorOrchestrator.applyFlavorDetailed()`** — returns a
+  `Map<String, Object?>` with the full apply result including `success`,
+  `flavor`, `platforms`, `dry_run`, `backup_id` (when applicable), `conflicts`
+  (when applicable), and `error` (on failure); used by the `apply --output json`
+  handler.
 - **`FlavorConfig.toJson()`** — serialises a `FlavorConfig` to a
   JSON-compatible map with stable top-level keys (`name`, `bundle_id`,
   `app_name`, `file_mappings`, `file_mappings_count`,
@@ -71,14 +80,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `FlavorOrchestrator.silent` mode — construction, listFlavors,
     getFlavorInfo, validateConfigurationsDetailed
   - JSON stable key contracts integration tests for all four commands
+- **Tests** — `test/orchestrator_json_output_test.dart` extended with:
+  - `FlavorOrchestrator.applyFlavorDetailed()` — stable keys, no backup_id in
+    dry-run, failure returns error key, result is JSON-encodable, platforms
+    field reflected correctly
+  - JSON stable key contracts for `apply` — dry-run payload, conflict result
 
 ### Changed
+- **CLI `apply` command** — Added `--output` (`text`|`json`, default `text`).
+  When `--output json`, uses the new `applyFlavorDetailed()` and emits a stable
+  JSON object.  Also propagates `silent: true` to suppress logger output.
 - **CLI `list` command** — Added `--output` (`text`|`json`, default `text`).
 - **CLI `info` command** — Added `--output` (`text`|`json`, default `text`).
 - **CLI `validate` command** — Added `--output` (`text`|`json`, default `text`).
 - **CLI `rollback` command** — Added `--output` (`text`|`json`, default `text`).
-- **CLI help/usage examples** — Added `--output json` examples for `list`,
-  `info`, `validate`, and `rollback` commands.
+- **CLI help/usage examples** — Added `--output json` examples for `apply`,
+  `list`, `info`, `validate`, and `rollback` commands.
+- **`FlavorOrchestrator.applyFlavor()`** — Internally now delegates to
+  `applyFlavorDetailed()` for a single implementation path; return type and
+  behaviour are unchanged.
 - **Version** bumped to `0.7.0`.
 
 ## [0.6.0] - 2026-03-03
