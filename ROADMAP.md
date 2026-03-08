@@ -45,7 +45,7 @@ Each item includes:
 - Feature 7: conflict detection and destructive-operation guardrails (`--force`).
 - Pre-apply validation of overlapping mappings and duplicate targets.
 
-### `v0.7.0` (automation contract)
+### ✅ `v0.7.0` (automation contract)
 - Feature 5: machine-readable output (`--output json`) for `list`, `info`, `validate`, `plan`, `rollback`.
 - Standardized exit codes and stable JSON top-level keys.
 
@@ -274,7 +274,7 @@ Speeds onboarding and reduces initial configuration mistakes.
 2. ✅ `plan` command — **done in v0.4.0**
 3. ✅ Backup + `rollback` — **done in v0.5.0**
 4. ✅ Conflict detection and destructive-operation guardrails — **done in v0.6.0**
-5. Output formatter abstraction + JSON output
+5. ✅ Output formatter abstraction + JSON output — **done in v0.7.0**
 6. Schema versioning + strict validation
 7. `doctor` command
 8. Env-var interpolation

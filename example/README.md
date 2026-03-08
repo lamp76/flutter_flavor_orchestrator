@@ -15,6 +15,7 @@ This example demonstrates how to use the `flutter_flavor_orchestrator` package t
 - ✅ Plan preview with `plan --flavor <name>` (no file mutations)
 - ✅ Automatic backup and `rollback --latest` to restore previous state
 - ✅ Conflict detection — duplicate and overlapping destination guardrails
+- ✅ Machine-readable JSON output (`--output json`) for all commands
 
 ## Project Structure
 
@@ -48,12 +49,18 @@ example/
 
 ```bash
 flutter_flavor_orchestrator list
+
+# Machine-readable JSON output
+flutter_flavor_orchestrator list --output json
 ```
 
 ### 2. View Flavor Details
 
 ```bash
 flutter_flavor_orchestrator info --flavor dev
+
+# Machine-readable JSON output
+flutter_flavor_orchestrator info --flavor dev --output json
 ```
 
 ### 3. Apply a Flavor
@@ -73,6 +80,11 @@ Apply production flavor to iOS only:
 flutter_flavor_orchestrator apply --flavor production --platform ios
 ```
 
+Get machine-readable JSON result (great for CI pipelines):
+```bash
+flutter_flavor_orchestrator apply --flavor dev --output json
+```
+
 ### 4. Preview Operations (Plan)
 
 Preview what would be applied without mutating any files:
@@ -85,7 +97,7 @@ Or get machine-readable JSON output:
 flutter_flavor_orchestrator plan --flavor dev --output json
 ```
 
-### 5. Conflict Detection (New in v0.6.0)
+### 5. Conflict Detection (v0.6.0+)
 
 The `apply` command automatically checks for conflicts before touching any
 files.  If two operations target the same destination path, or one destination
@@ -111,6 +123,9 @@ flutter_flavor_orchestrator plan --flavor dev
 After an `apply`, restore all modified files to their pre-apply state:
 ```bash
 flutter_flavor_orchestrator rollback --latest
+
+# Get JSON result
+flutter_flavor_orchestrator rollback --latest --output json
 ```
 
 Force rollback even if files were manually edited after the apply:
@@ -127,6 +142,9 @@ flutter_flavor_orchestrator rollback --id 20260225_194640123_dev
 
 ```bash
 flutter_flavor_orchestrator validate
+
+# Machine-readable JSON output (all flavors evaluated)
+flutter_flavor_orchestrator validate --output json
 ```
 
 ### 8. Use External Configuration Path (CI/CD)

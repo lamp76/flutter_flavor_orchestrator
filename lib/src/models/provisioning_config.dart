@@ -48,6 +48,15 @@ final class ProvisioningConfig {
         if (additionalFiles.isNotEmpty) 'additional_files': additionalFiles,
       };
 
+  /// Serialises this config to a JSON-compatible map.
+  Map<String, Object?> toJson() => {
+        if (androidGoogleServicesPath != null)
+          'android_google_services': androidGoogleServicesPath,
+        if (iosGoogleServicePath != null)
+          'ios_google_service': iosGoogleServicePath,
+        if (additionalFiles.isNotEmpty) 'additional_files': additionalFiles,
+      };
+
   @override
   String toString() => 'ProvisioningConfig('
       'androidGoogleServicesPath: $androidGoogleServicesPath, '
