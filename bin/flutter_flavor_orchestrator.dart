@@ -134,6 +134,11 @@ ArgParser _buildApplyCommand() => ArgParser()
     help: 'Execute checks without modifying files.',
   )
   ..addFlag(
+    'force',
+    negatable: false,
+    help: 'Override conflict-detection guardrails and apply anyway.',
+  )
+  ..addFlag(
     'verbose',
     negatable: false,
     help: 'Enable verbose debug output.',
@@ -259,6 +264,7 @@ Future<void> _handleApplyCommand(
   final verbose = command['verbose'] as bool;
   final configPath = command['config'] as String?;
   final dryRun = command['dry-run'] as bool;
+  final force = command['force'] as bool;
 
   final orchestrator = FlavorOrchestrator(
     projectRoot: projectRoot,
@@ -271,6 +277,7 @@ Future<void> _handleApplyCommand(
       flavor,
       platforms: platforms,
       dryRun: dryRun,
+      force: force,
     );
     exit(success ? 0 : 1);
   } on FormatException catch (e) {
@@ -521,6 +528,9 @@ EXAMPLES:
   # Validate an apply run without changing files
   flutter_flavor_orchestrator apply --flavor dev --dry-run
 
+  # Override conflict guardrails and apply anyway
+  flutter_flavor_orchestrator apply --flavor dev --force
+
   # Preview operations without mutating files
   flutter_flavor_orchestrator plan --flavor dev
 
@@ -561,5 +571,5 @@ https://github.com/lamp76/flutter_flavor_orchestrator
 
 /// Prints version information.
 void _printVersion() {
-  stdout.writeln('Flutter Flavor Orchestrator v0.5.0');
+  stdout.writeln('Flutter Flavor Orchestrator v0.6.0');
 }

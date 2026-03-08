@@ -5,6 +5,66 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] - 2026-03-03
+
+### Added
+- **Conflict detection before non-dry-run `apply`** — Before touching any files
+  the orchestrator now runs `ConflictAnalyzer.analyze()` on the execution plan
+  and fails fast if any conflict is found.  Two conflict classes are detected:
+  - **`duplicate_destination`** — two or more active (non-skip) operations
+    target the same destination path.  Example: a `file_mappings` entry whose
+    key matches a path already written by the Android or iOS processor (e.g.
+    `android/app/src/main/AndroidManifest.xml`).
+  - **`overlapping_destinations`** — one destination path is a parent directory
+    of another (e.g. `lib/` and `lib/config/app_config.dart` are both targets).
+  Conflicts cause `applyFlavor()` to return `false` immediately, before any
+  backup is created or any file is modified.
+- **`apply --force`** CLI flag — Overrides conflict guardrails.  When `--force`
+  is passed, detected conflicts are logged as warnings and the apply proceeds
+  normally.  Exit code is `0` on overall success.
+- **`FlavorOrchestrator.applyFlavor({bool force = false})`** — New optional
+  `force` parameter mirrors the CLI flag for programmatic use.
+- **`ConflictAnalyzer`** (`lib/src/utils/conflict_analyzer.dart`) — New public
+  utility class that analyses an `ExecutionPlan` for duplicate and overlapping
+  destination paths.  Can be used independently:
+  ```dart
+  final conflicts = const ConflictAnalyzer().analyze(plan);
+  ```
+- **`ConflictReport`** — Immutable conflict descriptor with stable fields
+  `code`, `severity`, `message`, `conflictingPaths`, and `toJson()`.
+- **`ConflictSeverity`** — Enum with values `error` and `warning`.
+- **Exported as public API** — `ConflictAnalyzer`, `ConflictReport`, and
+  `ConflictSeverity` are now part of the library's public API.
+- **Tests** — `test/utils/conflict_analyzer_test.dart` covers:
+  - Empty plan — no conflicts
+  - Plan with unique destinations — no conflicts
+  - Duplicate destination detection (same path written twice)
+  - Overlapping destination detection (parent dir vs. nested path)
+  - Child-before-parent ordering produces the same result
+  - Skip operations excluded from conflict detection
+  - Operations without destination paths do not produce false positives
+  - No duplicate overlap reports for the same path pair
+  - Sibling directories with a shared string prefix do not trigger overlaps
+  - `ConflictReport.toJson()` contains required keys
+  - `ConflictReport.toString()` contains code and message
+- **Integration tests** — `test/orchestrator_conflict_test.dart` covers:
+  - `applyFlavor` succeeds with a conflict-free plan
+  - `applyFlavor` returns `false` for a duplicate-destination plan (no force)
+  - `applyFlavor` succeeds with `force: true` for a duplicate-destination plan
+  - No file mutations occur when `applyFlavor` aborts due to a conflict
+  - `applyFlavor` succeeds with non-conflicting `file_mappings`
+  - `applyFlavor` fails for overlapping `file_mappings` destinations
+  - `planFlavor` returns the plan regardless of conflicts (read-only)
+
+### Changed
+- **`FlavorOrchestrator.applyFlavor()`** — Runs `ConflictAnalyzer` immediately
+  after building the execution plan, before creating a backup or mutating any
+  files.
+- **CLI `apply` command** — Added `--force` flag.
+- **CLI help / usage examples** — Added `--force` example to the `apply`
+  section.
+- **Version** bumped to `0.6.0`.
+
 ## [0.5.0] - 2026-02-28
 
 ### Fixed
@@ -345,6 +405,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Detailed logging for debugging and auditing
 - Extensible architecture for future enhancements
 
+[0.6.0]: https://github.com/lamp76/flutter_flavor_orchestrator/releases/tag/v0.6.0
 [0.5.0]: https://github.com/lamp76/flutter_flavor_orchestrator/releases/tag/v0.5.0
 [0.4.0]: https://github.com/lamp76/flutter_flavor_orchestrator/releases/tag/v0.4.0
 [0.3.0]: https://github.com/lamp76/flutter_flavor_orchestrator/releases/tag/v0.3.0

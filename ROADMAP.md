@@ -41,7 +41,7 @@ Each item includes:
 - Feature 2: automatic backup before non-dry-run `apply`.
 - Initial `rollback --latest` support.
 
-### `v0.6.0` (conflict protection)
+### ✅ `v0.6.0` (conflict protection)
 - Feature 7: conflict detection and destructive-operation guardrails (`--force`).
 - Pre-apply validation of overlapping mappings and duplicate targets.
 
@@ -273,11 +273,12 @@ Speeds onboarding and reduces initial configuration mistakes.
 1. ✅ Shared operation planning refactor (foundation for `plan`, safety checks, backups) — **done in v0.3.0**
 2. ✅ `plan` command — **done in v0.4.0**
 3. ✅ Backup + `rollback` — **done in v0.5.0**
-4. Output formatter abstraction + JSON output
-5. Schema versioning + strict validation
-6. `doctor` command
-7. Env interpolation and conflict guardrails
-8. `init` command
+4. ✅ Conflict detection and destructive-operation guardrails — **done in v0.6.0**
+5. Output formatter abstraction + JSON output
+6. Schema versioning + strict validation
+7. `doctor` command
+8. Env-var interpolation
+9. `init` command
 
 ---
 

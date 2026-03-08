@@ -12,7 +12,24 @@
 
 Build-time orchestration for Flutter flavors across Android and iOS. Configure environment-specific app identity, native metadata, provisioning files, and resource mappings from a single YAML source.
 
-## What's New (v0.5.0)
+## What's New (v0.6.0)
+
+- **Conflict detection before `apply`** — Every `apply` run now analyzes the
+  execution plan for conflicts before touching any files.  Two classes of
+  conflict are detected:
+  - **Duplicate destinations** — two or more operations target the same output
+    path (e.g. a `file_mappings` entry writes to the same file as a platform
+    processor).
+  - **Overlapping destinations** — one destination path is a parent directory
+    of another (e.g. `lib/` and `lib/config/app_config.dart`).
+- **`apply --force`** — Pass `--force` to override conflict guardrails and
+  apply the flavor anyway (conflicts are logged as warnings).
+- **`ConflictAnalyzer` public API** — New `ConflictAnalyzer` class and
+  `ConflictReport` / `ConflictSeverity` models exported as public API for
+  programmatic conflict checks on any `ExecutionPlan`.
+- Conflicts **fail fast** before any file mutation.
+
+## Previous: What's New (v0.5.0)
 
 - **Automatic backup before `apply`** — Every non-dry-run `apply` now snapshots
   all destination files into `.ffo/backups/` before touching them.  Each backup
@@ -54,6 +71,7 @@ Build-time orchestration for Flutter flavors across Android and iOS. Configure e
 - **File mappings** - Copy flavor-specific files and recursive directories
 - **Atomic directory replacement** - Backup/restore-safe replacement of destination directories
 - **Persistent backup & rollback** — Automatic pre-apply snapshots with checksum validation and `rollback` CLI command
+- **Conflict detection** — Pre-apply duplicate-target and overlapping-destination guardrails; `--force` override
 - **YAML-driven configuration** - Single declarative config for all flavors
 - **Typed execution plan** - `ExecutionPlan`, `PlannedOperation`, `OperationKind` models with `toJson()`
 - **CLI workflow** - `apply`, `plan`, `rollback`, `list`, `info`, and `validate` commands
@@ -64,7 +82,8 @@ Build-time orchestration for Flutter flavors across Android and iOS. Configure e
 ## 📋 Table of Contents
 
 - [Installation](#installation)
-- [What's New (v0.5.0)](#whats-new-v050)
+- [What's New (v0.6.0)](#whats-new-v060)
+- [Previous: What's New (v0.5.0)](#previous-whats-new-v050)
 - [Previous: What's New (v0.4.0)](#previous-whats-new-v040)
 - [Quick Start](#quick-start)
 - [Pub.dev Workflow](#pubdev-workflow)
@@ -86,7 +105,7 @@ Add `flutter_flavor_orchestrator` to your `pubspec.yaml` dev dependencies:
 
 ```yaml
 dev_dependencies:
-  flutter_flavor_orchestrator: ^0.5.0
+  flutter_flavor_orchestrator: ^0.6.0
 ```
 
 Then run:
@@ -309,6 +328,9 @@ flutter_flavor_orchestrator apply --flavor dev --dry-run
 # Apply to iOS only
 flutter_flavor_orchestrator apply --flavor production --platform ios
 
+# Override conflict guardrails and apply anyway
+flutter_flavor_orchestrator apply --flavor dev --force
+
 # Enable verbose output
 flutter_flavor_orchestrator apply --flavor dev --verbose
 ```
@@ -527,6 +549,8 @@ lib/
 │   │   ├── asset_processor.dart     # planFileMappings() added (v0.3.0)
 │   │   └── ios_processor.dart
 │   ├── utils/              # Utilities
+│   │   ├── backup_manager.dart      # Persistent backup/restore (v0.5.0)
+│   │   ├── conflict_analyzer.dart   # Duplicate/overlap detection (v0.6.0)
 │   │   ├── file_manager.dart
 │   │   └── logger.dart
 │   ├── config_parser.dart  # Configuration parsing
@@ -536,12 +560,14 @@ lib/
 
 ### Key Components
 
-- **FlavorOrchestrator**: Coordinates the entire process; builds an `ExecutionPlan` before applying
+- **FlavorOrchestrator**: Coordinates the entire process; builds an `ExecutionPlan` before applying; runs conflict analysis before any file mutation
 - **ConfigParser**: Parses and validates YAML configurations
 - **AndroidProcessor**: Handles Android-specific modifications
 - **IosProcessor**: Handles iOS-specific modifications
 - **AssetProcessor**: Handles file-mapping copy and planning operations
 - **ExecutionPlan / PlannedOperation / OperationKind**: Typed, immutable operation models with JSON serialisation
+- **ConflictAnalyzer**: Pre-apply conflict detection — duplicate and overlapping destinations (v0.6.0)
+- **BackupManager**: Persistent pre-apply snapshots with checksum validation and rollback
 - **FileManager**: Provides safe file operations with backup/rollback
 
 ## 📚 Examples
@@ -612,11 +638,24 @@ void main() async {
     platforms: ['android', 'ios'],
   );
 
+  // Apply overriding conflict guardrails
+  final forcedSuccess = await orchestrator.applyFlavor(
+    'dev',
+    platforms: ['android', 'ios'],
+    force: true,
+  );
+
   // Preview operations without mutating files
   final plan = await orchestrator.planFlavor(
     'dev',
     platforms: ['android', 'ios'],
   );
+
+  // Check for conflicts before applying
+  final conflicts = const ConflictAnalyzer().analyze(plan);
+  for (final conflict in conflicts) {
+    print('[${conflict.severity.name}] ${conflict.code}: ${conflict.message}');
+  }
 
   // List flavors
   final flavors = await orchestrator.listFlavors();
@@ -633,12 +672,50 @@ void main() async {
 - **ExecutionPlan**: Ordered list of `PlannedOperation`s for a flavor; serialisable via `toJson()`
 - **PlannedOperation**: Immutable descriptor of a single orchestration step with kind, paths, and platform
 - **OperationKind**: Enum — `copyFile`, `copyDirectory`, `writeFile`, `skip`
+- **ConflictReport**: Immutable conflict descriptor with `code`, `severity`, `message`, `conflictingPaths`, and `toJson()`
+- **ConflictSeverity**: Enum — `error`, `warning`
+- **ConflictAnalyzer**: Analyses an `ExecutionPlan` for duplicate and overlapping destinations
 - **ConfigParser**: Configuration parsing and validation
 - **FlavorOrchestrator**: Main orchestration logic
 
 See the [API documentation](https://pub.dev/documentation/flutter_flavor_orchestrator/latest/) for detailed class and method documentation.
 
 ## 🔒 Safety Features
+
+### Conflict Detection (New in v0.6.0)
+
+Before touching any files, `apply` scans the execution plan for two classes
+of conflict:
+
+- **Duplicate destinations** — two operations write to the same output path.
+  Example: a `file_mappings` entry that targets
+  `android/app/src/main/AndroidManifest.xml` when the Android platform
+  processor already writes to that path.
+- **Overlapping destinations** — one destination is a parent directory of
+  another (e.g. `lib/` and `lib/config/app_config.dart` both appear as
+  destinations).
+
+If any conflict is found, `apply` aborts immediately (before any mutation) and
+exits with code `1`.  Pass `--force` to override and continue despite the
+conflicts (conflicts are then logged as warnings).
+
+```bash
+# Abort on conflict (default)
+flutter_flavor_orchestrator apply --flavor dev
+
+# Override conflicts and apply anyway
+flutter_flavor_orchestrator apply --flavor dev --force
+```
+
+You can also inspect conflicts programmatically using the public API:
+
+```dart
+final plan = await orchestrator.planFlavor('dev');
+final conflicts = const ConflictAnalyzer().analyze(plan);
+for (final c in conflicts) {
+  print('[${c.severity.name}] ${c.code}: ${c.message}');
+}
+```
 
 ### Automatic Backups
 
@@ -707,12 +784,12 @@ The full roadmap is in [ROADMAP.md](ROADMAP.md). Here is a compact summary of pr
 | **v0.3.0** | `OperationKind`, `PlannedOperation`, `ExecutionPlan` typed models · shared `_buildExecutionPlan()` in orchestrator · `AssetProcessor.planFileMappings()` |
 | **v0.4.0** | `plan` command — preview operations without mutating files; `planFlavor()` public API; `--output json` |
 | **v0.5.0** | `rollback` command + timestamped backup before every non-dry-run apply; `rollbackLatest()` / `rollbackById()` public API |
+| **v0.6.0** | Conflict detection — duplicate-target and overlapping-destination guardrails; `apply --force`; `ConflictAnalyzer` public API |
 
 ### Upcoming
 
 | Version | Theme | Key deliverable |
 |---------|-------|----------------|
-| **v0.6.0** | Conflict protection | Duplicate-target detection and `--force` guardrails |
 | **v0.7.0** | Automation contract | `--output json` for all commands; standardised exit codes |
 | **v0.8.0** | Schema hardening | `schema_version` enforcement, `validate --strict`, migration scaffold |
 | **v0.9.0** | Diagnostics | `doctor` command with categorised findings (error/warning/info) |

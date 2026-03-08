@@ -8,6 +8,7 @@ import 'processors/android_processor.dart';
 import 'processors/asset_processor.dart';
 import 'processors/ios_processor.dart';
 import 'utils/backup_manager.dart';
+import 'utils/conflict_analyzer.dart';
 import 'utils/file_manager.dart';
 import 'utils/logger.dart';
 
@@ -85,11 +86,17 @@ final class FlavorOrchestrator {
   /// Before executing, a persistent backup of all destination files is
   /// created in `.ffo/backups/` unless [dryRun] is `true`.
   ///
+  /// If the execution plan contains conflicts (duplicate or overlapping
+  /// destination paths), the apply is aborted and returns `false` unless
+  /// [force] is `true`, in which case the conflicts are logged as warnings
+  /// and execution continues.
+  ///
   /// Returns `true` if the operation succeeds, `false` otherwise.
   Future<bool> applyFlavor(
     String flavorName, {
     List<String> platforms = const ['android', 'ios'],
     bool dryRun = false,
+    bool force = false,
   }) async {
     try {
       fileManager.dryRun = dryRun;
@@ -126,6 +133,28 @@ final class FlavorOrchestrator {
         'Execution plan: ${plan.activeOperations} active, '
         '${plan.skippedOperations} skipped',
       );
+
+      // Run conflict analysis before any file mutations.
+      final conflicts = const ConflictAnalyzer().analyze(plan);
+      if (conflicts.isNotEmpty) {
+        if (!force) {
+          logger.error(
+            'Conflict detection failed: ${conflicts.length} conflict(s) '
+            'found. Use --force to override.',
+          );
+          for (final conflict in conflicts) {
+            logger.error('  [${conflict.code}] ${conflict.message}');
+          }
+          return false;
+        } else {
+          logger.warning(
+            'Conflicts detected (continuing due to --force):',
+          );
+          for (final conflict in conflicts) {
+            logger.warning('  [${conflict.code}] ${conflict.message}');
+          }
+        }
+      }
 
       // Create persistent backup before mutating any files (skip in dry-run)
       BackupRecord? backupRecord;
