@@ -302,17 +302,27 @@ void main() {
 
     group('SchemaValidationResult', () {
       test('errorsForFlavor returns empty list for unknown flavor', () {
-        final result = const SchemaValidator().validate({'dev': {}}, 1, strict: true);
+        final result = const SchemaValidator().validate(
+          <String, Map<String, Object?>>{'dev': <String, Object?>{}},
+          1,
+          strict: true,
+        );
         expect(result.errorsForFlavor('nonexistent'), isEmpty);
       });
 
       test('warningsForFlavor returns empty list for unknown flavor', () {
-        final result = const SchemaValidator().validate({'dev': {}}, null);
+        final result = const SchemaValidator().validate(
+          <String, Map<String, Object?>>{'dev': <String, Object?>{}},
+          null,
+        );
         expect(result.warningsForFlavor('nonexistent'), isEmpty);
       });
 
       test('hasWarnings is true when globalWarnings present', () {
-        final result = const SchemaValidator().validate({'dev': {}}, null);
+        final result = const SchemaValidator().validate(
+          <String, Map<String, Object?>>{'dev': <String, Object?>{}},
+          null,
+        );
         expect(result.hasWarnings, isTrue);
       });
 
@@ -551,9 +561,12 @@ dev:
 
       expect(results, isNotEmpty);
       for (final r in results) {
-        expect(r['valid'], isFalse,
-            reason: 'Every flavor should be invalid when schema_version '
-                'is missing in strict mode');
+        expect(
+          r['valid'],
+          isFalse,
+          reason: 'Every flavor should be invalid when schema_version '
+              'is missing in strict mode',
+        );
       }
     });
 
@@ -601,8 +614,12 @@ staging:
       expect(staging['valid'], isTrue);
 
       final errors = dev['errors']! as List;
-      expect(errors.any((e) => (e as String).contains('flavors.dev.rogue_key')),
-          isTrue);
+      expect(
+        errors.any(
+          (e) => (e as String).contains('flavors.dev.rogue_key'),
+        ),
+        isTrue,
+      );
     });
 
     test('non-strict: unknown flavor key stays valid with warning', () async {
@@ -659,8 +676,8 @@ dev:
 
       expect(results, hasLength(1));
       expect(results.first['valid'], isTrue);
-      expect((results.first['errors']! as List), isEmpty);
-      expect((results.first['warnings']! as List), isEmpty);
+      expect(results.first['errors']! as List, isEmpty);
+      expect(results.first['warnings']! as List, isEmpty);
     });
 
     test('strict: provisioning unknown key invalidates flavor', () async {
@@ -761,7 +778,7 @@ dev:
 
       final schemaVersion = await orchestrator.getSchemaVersion();
       final results =
-          await orchestrator.validateConfigurationsDetailed(strict: false);
+          await orchestrator.validateConfigurationsDetailed();
       final allValid = results.every((r) => r['valid'] as bool);
 
       final payload = jsonEncode({

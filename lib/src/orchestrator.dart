@@ -471,12 +471,8 @@ final class FlavorOrchestrator {
       );
 
       // Log global schema issues before per-flavor output.
-      for (final w in schemaResult.globalWarnings) {
-        logger.warning(w);
-      }
-      for (final e in schemaResult.globalErrors) {
-        logger.error(e);
-      }
+      schemaResult.globalWarnings.forEach(logger.warning);
+      schemaResult.globalErrors.forEach(logger.error);
 
       final configs = await configParser.parseConfig(
         projectRoot,
@@ -499,12 +495,8 @@ final class FlavorOrchestrator {
         logger.info('Validating flavor: ${config.name}');
 
         // Per-flavor schema issues.
-        for (final w in schemaResult.warningsForFlavor(config.name)) {
-          logger.warning(w);
-        }
-        for (final e in schemaResult.errorsForFlavor(config.name)) {
-          logger.error(e);
-        }
+        schemaResult.warningsForFlavor(config.name).forEach(logger.warning);
+        schemaResult.errorsForFlavor(config.name).forEach(logger.error);
 
         final hasSchemaError =
             schemaResult.errorsForFlavor(config.name).isNotEmpty;

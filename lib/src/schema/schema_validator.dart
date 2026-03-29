@@ -147,7 +147,7 @@ final class SchemaValidator {
       }
     }
 
-    // ── Per-flavor key checks ─────────────────────────────────────────────────
+    // ── Per-flavor key checks ───────────────────────────────────────────────
     for (final entry in rawFlavors.entries) {
       final flavorName = entry.key as String;
 
@@ -211,7 +211,8 @@ final class SchemaValidator {
       }
 
       // ── Provisioning sub-key check ────────────────────────────────────────
-      if (keyStr == 'provisioning' && flavorData[key] is Map<dynamic, dynamic>) {
+      if (keyStr == 'provisioning' &&
+          flavorData[key] is Map<dynamic, dynamic>) {
         final provData = flavorData[key] as Map<dynamic, dynamic>;
         for (final provKey in provData.keys) {
           final provKeyStr = provKey as String;

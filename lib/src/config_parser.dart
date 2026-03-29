@@ -187,7 +187,8 @@ final class ConfigParser {
     final rawConfig = await _loadConfigYaml(projectRoot, configPath);
     final schemaVersion = extractSchemaVersion(rawConfig);
 
-    // Build a flavor-only map for the validator (strip reserved top-level keys).
+    // Build a flavor-only map for the validator
+    // (strip reserved top-level keys).
     final flavorsOnly = Map<dynamic, dynamic>.fromEntries(
       rawConfig.entries.where(
         (e) => !_reservedTopLevelKeys.contains(e.key as String),
