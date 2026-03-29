@@ -302,8 +302,9 @@ void main() {
 
     group('SchemaValidationResult', () {
       test('errorsForFlavor returns empty list for unknown flavor', () {
+        final rawFlavors = <String, Map<String, Object?>>{'dev': {}};
         final result = const SchemaValidator().validate(
-          <String, Map<String, Object?>>{'dev': <String, Object?>{}},
+          rawFlavors,
           1,
           strict: true,
         );
@@ -311,16 +312,18 @@ void main() {
       });
 
       test('warningsForFlavor returns empty list for unknown flavor', () {
+        final rawFlavors = <String, Map<String, Object?>>{'dev': {}};
         final result = const SchemaValidator().validate(
-          <String, Map<String, Object?>>{'dev': <String, Object?>{}},
+          rawFlavors,
           null,
         );
         expect(result.warningsForFlavor('nonexistent'), isEmpty);
       });
 
       test('hasWarnings is true when globalWarnings present', () {
+        final rawFlavors = <String, Map<String, Object?>>{'dev': {}};
         final result = const SchemaValidator().validate(
-          <String, Map<String, Object?>>{'dev': <String, Object?>{}},
+          rawFlavors,
           null,
         );
         expect(result.hasWarnings, isTrue);
