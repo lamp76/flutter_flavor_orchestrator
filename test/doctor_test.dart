@@ -101,7 +101,7 @@ void main() {
 
   group('DoctorResult model', () {
     test('hasErrors is false when no errors', () {
-      const result = DoctorResult(diagnostics: [
+      final result = DoctorResult(diagnostics: [
         Diagnostic(code: 'a', severity: DiagnosticSeverity.info, message: 'ok'),
         Diagnostic(code: 'b', severity: DiagnosticSeverity.warning, message: 'warn'),
       ]);
@@ -109,7 +109,7 @@ void main() {
     });
 
     test('hasErrors is true when any error exists', () {
-      const result = DoctorResult(diagnostics: [
+      final result = DoctorResult(diagnostics: [
         Diagnostic(code: 'a', severity: DiagnosticSeverity.info, message: 'ok'),
         Diagnostic(code: 'b', severity: DiagnosticSeverity.error, message: 'err'),
       ]);
@@ -117,7 +117,7 @@ void main() {
     });
 
     test('errors / warnings / infos filter correctly', () {
-      const result = DoctorResult(diagnostics: [
+      final result = DoctorResult(diagnostics: [
         Diagnostic(code: 'e1', severity: DiagnosticSeverity.error, message: 'err'),
         Diagnostic(code: 'w1', severity: DiagnosticSeverity.warning, message: 'warn'),
         Diagnostic(code: 'i1', severity: DiagnosticSeverity.info, message: 'info'),
@@ -129,7 +129,7 @@ void main() {
     });
 
     test('toJson has stable top-level keys', () {
-      const result = DoctorResult(diagnostics: [
+      final result = DoctorResult(diagnostics: [
         Diagnostic(code: 'err', severity: DiagnosticSeverity.error, message: 'm'),
       ]);
 
@@ -143,21 +143,21 @@ void main() {
     });
 
     test('toJson healthy is false when errors exist', () {
-      const result = DoctorResult(diagnostics: [
+      final result = DoctorResult(diagnostics: [
         Diagnostic(code: 'err', severity: DiagnosticSeverity.error, message: 'm'),
       ]);
       expect(result.toJson()['healthy'], isFalse);
     });
 
     test('toJson healthy is true when no errors', () {
-      const result = DoctorResult(diagnostics: [
+      final result = DoctorResult(diagnostics: [
         Diagnostic(code: 'w', severity: DiagnosticSeverity.warning, message: 'm'),
       ]);
       expect(result.toJson()['healthy'], isTrue);
     });
 
     test('toJson is JSON-encodable', () {
-      const result = DoctorResult(diagnostics: [
+      final result = DoctorResult(diagnostics: [
         Diagnostic(
           code: 'info',
           severity: DiagnosticSeverity.info,

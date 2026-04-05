@@ -82,31 +82,45 @@ final class Diagnostic {
 /// Contains all [Diagnostic] findings produced by the checks.  Use
 /// [hasErrors] to decide the exit code — the `doctor` command should exit
 /// with a non-zero code when any error-level finding is present.
+///
+/// The [errors], [warnings], and [infos] lists are pre-computed at
+/// construction time to avoid repeated filtering.
 final class DoctorResult {
   /// Creates a [DoctorResult] with the given [diagnostics].
-  const DoctorResult({required this.diagnostics});
+  ///
+  /// [errors], [warnings], and [infos] are pre-computed eagerly so that
+  /// subsequent accesses are O(1).
+  DoctorResult({required this.diagnostics})
+      : errors = List.unmodifiable(
+          diagnostics
+              .where((d) => d.severity == DiagnosticSeverity.error)
+              .toList(),
+        ),
+        warnings = List.unmodifiable(
+          diagnostics
+              .where((d) => d.severity == DiagnosticSeverity.warning)
+              .toList(),
+        ),
+        infos = List.unmodifiable(
+          diagnostics
+              .where((d) => d.severity == DiagnosticSeverity.info)
+              .toList(),
+        );
 
   /// All diagnostic findings, in the order they were produced.
   final List<Diagnostic> diagnostics;
 
   /// `true` when at least one finding has [DiagnosticSeverity.error].
-  bool get hasErrors =>
-      diagnostics.any((d) => d.severity == DiagnosticSeverity.error);
+  bool get hasErrors => errors.isNotEmpty;
 
-  /// Error-level findings.
-  List<Diagnostic> get errors => diagnostics
-      .where((d) => d.severity == DiagnosticSeverity.error)
-      .toList();
+  /// Error-level findings (pre-computed at construction time).
+  final List<Diagnostic> errors;
 
-  /// Warning-level findings.
-  List<Diagnostic> get warnings => diagnostics
-      .where((d) => d.severity == DiagnosticSeverity.warning)
-      .toList();
+  /// Warning-level findings (pre-computed at construction time).
+  final List<Diagnostic> warnings;
 
-  /// Info-level findings.
-  List<Diagnostic> get infos => diagnostics
-      .where((d) => d.severity == DiagnosticSeverity.info)
-      .toList();
+  /// Info-level findings (pre-computed at construction time).
+  final List<Diagnostic> infos;
 
   /// Serialises the result to a JSON-compatible map.
   ///
