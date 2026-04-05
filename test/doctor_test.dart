@@ -93,7 +93,10 @@ void main() {
     });
 
     test('severity values are error, warning, info', () {
-      expect(DiagnosticSeverity.values.map((s) => s.name), containsAll(['error', 'warning', 'info']));
+      expect(
+        DiagnosticSeverity.values.map((s) => s.name),
+        containsAll(['error', 'warning', 'info']),
+      );
     });
   });
 
@@ -102,26 +105,58 @@ void main() {
   group('DoctorResult model', () {
     test('hasErrors is false when no errors', () {
       final result = DoctorResult(diagnostics: [
-        Diagnostic(code: 'a', severity: DiagnosticSeverity.info, message: 'ok'),
-        Diagnostic(code: 'b', severity: DiagnosticSeverity.warning, message: 'warn'),
+        const Diagnostic(
+          code: 'a',
+          severity: DiagnosticSeverity.info,
+          message: 'ok',
+        ),
+        const Diagnostic(
+          code: 'b',
+          severity: DiagnosticSeverity.warning,
+          message: 'warn',
+        ),
       ]);
       expect(result.hasErrors, isFalse);
     });
 
     test('hasErrors is true when any error exists', () {
       final result = DoctorResult(diagnostics: [
-        Diagnostic(code: 'a', severity: DiagnosticSeverity.info, message: 'ok'),
-        Diagnostic(code: 'b', severity: DiagnosticSeverity.error, message: 'err'),
+        const Diagnostic(
+          code: 'a',
+          severity: DiagnosticSeverity.info,
+          message: 'ok',
+        ),
+        const Diagnostic(
+          code: 'b',
+          severity: DiagnosticSeverity.error,
+          message: 'err',
+        ),
       ]);
       expect(result.hasErrors, isTrue);
     });
 
     test('errors / warnings / infos filter correctly', () {
       final result = DoctorResult(diagnostics: [
-        Diagnostic(code: 'e1', severity: DiagnosticSeverity.error, message: 'err'),
-        Diagnostic(code: 'w1', severity: DiagnosticSeverity.warning, message: 'warn'),
-        Diagnostic(code: 'i1', severity: DiagnosticSeverity.info, message: 'info'),
-        Diagnostic(code: 'e2', severity: DiagnosticSeverity.error, message: 'err2'),
+        const Diagnostic(
+          code: 'e1',
+          severity: DiagnosticSeverity.error,
+          message: 'err',
+        ),
+        const Diagnostic(
+          code: 'w1',
+          severity: DiagnosticSeverity.warning,
+          message: 'warn',
+        ),
+        const Diagnostic(
+          code: 'i1',
+          severity: DiagnosticSeverity.info,
+          message: 'info',
+        ),
+        const Diagnostic(
+          code: 'e2',
+          severity: DiagnosticSeverity.error,
+          message: 'err2',
+        ),
       ]);
       expect(result.errors, hasLength(2));
       expect(result.warnings, hasLength(1));
@@ -130,7 +165,11 @@ void main() {
 
     test('toJson has stable top-level keys', () {
       final result = DoctorResult(diagnostics: [
-        Diagnostic(code: 'err', severity: DiagnosticSeverity.error, message: 'm'),
+        const Diagnostic(
+          code: 'err',
+          severity: DiagnosticSeverity.error,
+          message: 'm',
+        ),
       ]);
 
       final json = result.toJson();
@@ -144,21 +183,29 @@ void main() {
 
     test('toJson healthy is false when errors exist', () {
       final result = DoctorResult(diagnostics: [
-        Diagnostic(code: 'err', severity: DiagnosticSeverity.error, message: 'm'),
+        const Diagnostic(
+          code: 'err',
+          severity: DiagnosticSeverity.error,
+          message: 'm',
+        ),
       ]);
       expect(result.toJson()['healthy'], isFalse);
     });
 
     test('toJson healthy is true when no errors', () {
       final result = DoctorResult(diagnostics: [
-        Diagnostic(code: 'w', severity: DiagnosticSeverity.warning, message: 'm'),
+        const Diagnostic(
+          code: 'w',
+          severity: DiagnosticSeverity.warning,
+          message: 'm',
+        ),
       ]);
       expect(result.toJson()['healthy'], isTrue);
     });
 
     test('toJson is JSON-encodable', () {
       final result = DoctorResult(diagnostics: [
-        Diagnostic(
+        const Diagnostic(
           code: 'info',
           severity: DiagnosticSeverity.info,
           message: 'All good.',

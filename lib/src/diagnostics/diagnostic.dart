@@ -110,9 +110,6 @@ final class DoctorResult {
   /// All diagnostic findings, in the order they were produced.
   final List<Diagnostic> diagnostics;
 
-  /// `true` when at least one finding has [DiagnosticSeverity.error].
-  bool get hasErrors => errors.isNotEmpty;
-
   /// Error-level findings (pre-computed at construction time).
   final List<Diagnostic> errors;
 
@@ -121,6 +118,9 @@ final class DoctorResult {
 
   /// Info-level findings (pre-computed at construction time).
   final List<Diagnostic> infos;
+
+  /// `true` when at least one finding has [DiagnosticSeverity.error].
+  bool get hasErrors => errors.isNotEmpty;
 
   /// Serialises the result to a JSON-compatible map.
   ///
