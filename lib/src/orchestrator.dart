@@ -1,5 +1,7 @@
 import 'dart:io';
 import 'config_parser.dart';
+import 'diagnostics/diagnostic.dart';
+import 'diagnostics/doctor.dart';
 import 'models/execution_plan.dart';
 import 'models/flavor_config.dart';
 import 'models/operation_kind.dart';
@@ -703,6 +705,26 @@ final class FlavorOrchestrator {
       configPath: configPath,
     );
     return _buildExecutionPlan(config, platforms);
+  }
+
+  /// Runs preflight diagnostics on the project and returns a [DoctorResult].
+  ///
+  /// Checks are read-only: no files are mutated.
+  ///
+  /// [platforms] controls which platform-specific checks are executed.
+  /// Defaults to both `'android'` and `'ios'`.
+  ///
+  /// Exit-code semantics (for the CLI layer):
+  /// - Exit `0` when [DoctorResult.hasErrors] is `false`.
+  /// - Exit `1` when any error-level finding is present.
+  Future<DoctorResult> runDoctor({
+    List<String> platforms = const ['android', 'ios'],
+  }) {
+    final doctor = Doctor(
+      projectRoot: projectRoot,
+      configPath: configPath,
+    );
+    return doctor.run(platforms: platforms);
   }
 
   /// Restores project files from the most recent backup.

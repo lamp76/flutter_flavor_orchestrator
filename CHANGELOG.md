@@ -5,6 +5,61 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.0] - 2026-04-05
+
+### Added
+- **`doctor` command** — New preflight diagnostics command that runs a series
+  of read-only checks and returns categorised findings (error / warning / info)
+  with actionable suggestions.  Exit code is non-zero when any error-level
+  finding is present.
+  ```bash
+  flutter_flavor_orchestrator doctor
+  flutter_flavor_orchestrator doctor --platform android
+  flutter_flavor_orchestrator doctor --output json
+  flutter_flavor_orchestrator doctor --config ./ci/flavor_config.yaml
+  ```
+- **`doctor` checks** — The command performs the following checks:
+  - **`no_pubspec`** (error) — `pubspec.yaml` is missing; not a Flutter project.
+  - **`no_config`** (error) — No flavor config found in standard locations.
+  - **`config_parse_error`** (error) — Config YAML is unreadable, malformed,
+    or contains invalid flavor structures.
+  - **`no_flavor_config_key`** (error) — Config file exists but contains no
+    flavor definitions.
+  - **`platform_dir_missing`** (warning) — Expected platform directory
+    (`android/` or `ios/`) is absent.
+  - **`android_manifest_missing`** (error) — `android/app/src/main/
+    AndroidManifest.xml` not found.
+  - **`android_build_gradle_missing`** (error) — Neither `build.gradle` nor
+    `build.gradle.kts` found in `android/app/`.
+  - **`ios_info_plist_missing`** (error) — `ios/Runner/Info.plist` not found.
+  - **`ios_xcodeproj_missing`** (error) — `ios/Runner.xcodeproj/` not found.
+  - **`provisioning_file_missing`** (warning) — A provisioning source file
+    referenced in the config does not exist on disk.
+  - **`file_mapping_source_missing`** (warning) — A `file_mappings` source
+    path referenced in the config does not exist on disk.
+  - **`schema_version_missing`** (warning) — `schema_version` key is absent
+    from the config document.
+  - **`config_valid`** (info) — Config is present and all flavors are valid.
+- **`doctor --output json`** — JSON payload with stable top-level keys:
+  `command`, `healthy`, `error_count`, `warning_count`, `info_count`,
+  `diagnostics` (array of `{code, severity, message, suggestion?, path?}`).
+- **`Diagnostic` model** — New public class: `code`, `severity`
+  (`DiagnosticSeverity.error/warning/info`), `message`, `suggestion?`,
+  `path?`; serialisable via `toJson()`.
+- **`DoctorResult` model** — New public class with `diagnostics`,
+  `hasErrors`, `errors`, `warnings`, `infos`, and `toJson()`.
+- **`Doctor` class** — New public class (`lib/src/diagnostics/doctor.dart`).
+  Composable check pipeline — no file mutations.
+- **`FlavorOrchestrator.runDoctor({platforms})`** — New public method
+  delegating to `Doctor.run()`; returns `DoctorResult` without executing
+  any file operations.
+- **`Diagnostic`, `DoctorResult`, `Doctor` exported** as public API.
+
+### Changed
+- `bin/flutter_flavor_orchestrator.dart`: added `doctor` command and updated
+  help text / usage examples.
+- Version bumped to `0.9.0` in `pubspec.yaml`.
+
 ## [0.8.0] - 2026-03-08
 
 ### Added

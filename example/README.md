@@ -16,6 +16,7 @@ This example demonstrates how to use the `flutter_flavor_orchestrator` package t
 - ✅ Automatic backup and `rollback --latest` to restore previous state
 - ✅ Conflict detection — duplicate and overlapping destination guardrails
 - ✅ Machine-readable JSON output (`--output json`) for all commands
+- ✅ Doctor command (`doctor`) for preflight diagnostics
 
 ## Project Structure
 
@@ -147,7 +148,25 @@ flutter_flavor_orchestrator validate
 flutter_flavor_orchestrator validate --output json
 ```
 
-### 8. Use External Configuration Path (CI/CD)
+### 8. Doctor — Preflight Diagnostics
+
+Run diagnostics before the first `apply` to catch missing files and config
+issues early:
+
+```bash
+flutter_flavor_orchestrator doctor
+
+# Check Android only
+flutter_flavor_orchestrator doctor --platform android
+
+# Machine-readable JSON result
+flutter_flavor_orchestrator doctor --output json
+```
+
+Exit code is `0` when the project is healthy, `1` if error-level findings
+are present.
+
+### 9. Use External Configuration Path (CI/CD)
 
 Load flavor configuration from a YAML file outside the project root:
 
