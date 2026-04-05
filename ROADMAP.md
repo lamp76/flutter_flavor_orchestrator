@@ -49,9 +49,12 @@ Each item includes:
 - Feature 5: machine-readable output (`--output json`) for `list`, `info`, `validate`, `plan`, `rollback`.
 - Standardized exit codes and stable JSON top-level keys.
 
-### `v0.8.0` (schema hardening)
+### ✅ `v0.8.0` (schema hardening)
 - Feature 3: strict config schema + versioning/migrations scaffold.
 - `validate --strict` + deprecation/unknown-key handling.
+- `schema_version` top-level key support in config files.
+- `SchemaMigration` interface and `SchemaMigrations` registry scaffold.
+- Per-flavor unknown/deprecated key detection with actionable key-path messages.
 
 ### `v0.9.0` (diagnostics maturity)
 - Feature 4 (partial): `doctor` command with core checks and actionable suggestions.
@@ -275,7 +278,7 @@ Speeds onboarding and reduces initial configuration mistakes.
 3. ✅ Backup + `rollback` — **done in v0.5.0**
 4. ✅ Conflict detection and destructive-operation guardrails — **done in v0.6.0**
 5. ✅ Output formatter abstraction + JSON output — **done in v0.7.0**
-6. Schema versioning + strict validation
+6. ✅ Schema versioning + strict validation — **done in v0.8.0**
 7. `doctor` command
 8. Env-var interpolation
 9. `init` command

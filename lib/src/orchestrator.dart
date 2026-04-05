@@ -372,19 +372,43 @@ final class FlavorOrchestrator {
         configPath: configPath,
       );
 
+  /// Returns the `schema_version` declared in the config document.
+  ///
+  /// Returns the version integer when present, or `null` if the
+  /// `schema_version` key is absent from the config file.
+  Future<int?> getSchemaVersion() =>
+      configParser.parseSchemaVersion(projectRoot, configPath: configPath);
+
   /// Returns per-flavor validation results as a structured list.
   ///
   /// Each entry in the returned list is a map with the following stable keys:
   /// - `name` — flavor name
-  /// - `valid` — `true` if validation passed
+  /// - `valid` — `true` if validation passed (no config errors AND no schema
+  ///   errors when [strict] is `true`)
   /// - `errors` — list of error message strings (empty when valid)
+  /// - `warnings` — list of schema warning strings (non-strict mode only;
+  ///   empty when [strict] is `true` because warnings become errors)
   ///
   /// This method is the data source for `validate --output json`.  For
   /// human-readable output, use [validateConfigurations] instead.
   ///
   /// Unlike [validateConfigurations], this method does **not** abort on the
   /// first invalid flavor — it processes every flavor and collects all results.
-  Future<List<Map<String, Object?>>> validateConfigurationsDetailed() async {
+  ///
+  /// When [strict] is `true`:
+  /// - Missing `schema_version` causes a validation error for every flavor.
+  /// - Unknown or deprecated keys in a flavor block cause that flavor to be
+  ///   marked invalid.
+  Future<List<Map<String, Object?>>> validateConfigurationsDetailed({
+    bool strict = false,
+  }) async {
+    // Schema validation (new in v0.8.0) ────────────────────────────────────
+    final schemaResult = await configParser.validateSchema(
+      projectRoot,
+      configPath: configPath,
+      strict: strict,
+    );
+
     // Use unchecked parse so that invalid flavors do not abort the loop.
     final configs = await configParser.parseConfigUnchecked(
       projectRoot,
@@ -394,14 +418,30 @@ final class FlavorOrchestrator {
     final results = <Map<String, Object?>>[];
 
     for (final config in configs.values) {
+      final schemaErrors = [
+        ...schemaResult.globalErrors,
+        ...schemaResult.errorsForFlavor(config.name),
+      ];
+      final schemaWarnings = [
+        ...schemaResult.globalWarnings,
+        ...schemaResult.warningsForFlavor(config.name),
+      ];
+
       try {
         configParser.validateConfig(config);
-        results.add({'name': config.name, 'valid': true, 'errors': <String>[]});
+        final allErrors = schemaErrors;
+        results.add({
+          'name': config.name,
+          'valid': allErrors.isEmpty,
+          'errors': allErrors,
+          'warnings': schemaWarnings,
+        });
       } on FormatException catch (e) {
         results.add({
           'name': config.name,
           'valid': false,
-          'errors': [e.message],
+          'errors': [...schemaErrors, e.message],
+          'warnings': schemaWarnings,
         });
       }
     }
@@ -412,9 +452,27 @@ final class FlavorOrchestrator {
   /// Validates all flavor configurations.
   ///
   /// Returns `true` if all configurations are valid, `false` otherwise.
-  Future<bool> validateConfigurations() async {
+  ///
+  /// When [strict] is `true`:
+  /// - Missing `schema_version` causes validation to fail.
+  /// - Unknown or deprecated keys in a flavor block cause that flavor to be
+  ///   marked invalid.
+  /// In non-strict mode, schema issues are logged as warnings but do not
+  /// affect the returned value.
+  Future<bool> validateConfigurations({bool strict = false}) async {
     try {
       logger.section('Validating Configurations');
+
+      // Schema validation pass (v0.8.0) ──────────────────────────────────────
+      final schemaResult = await configParser.validateSchema(
+        projectRoot,
+        configPath: configPath,
+        strict: strict,
+      );
+
+      // Log global schema issues before per-flavor output.
+      schemaResult.globalWarnings.forEach(logger.warning);
+      schemaResult.globalErrors.forEach(logger.error);
 
       final configs = await configParser.parseConfig(
         projectRoot,
@@ -428,13 +486,32 @@ final class FlavorOrchestrator {
 
       var allValid = true;
 
+      // If there are global schema errors (strict mode), the whole run fails.
+      if (schemaResult.globalErrors.isNotEmpty) {
+        allValid = false;
+      }
+
       for (final config in configs.values) {
         logger.info('Validating flavor: ${config.name}');
+
+        // Per-flavor schema issues.
+        schemaResult.warningsForFlavor(config.name).forEach(logger.warning);
+        schemaResult.errorsForFlavor(config.name).forEach(logger.error);
+
+        final hasSchemaError =
+            schemaResult.errorsForFlavor(config.name).isNotEmpty;
 
         try {
           configParser.validateConfig(config);
           _printValidationFeatureSummary(config);
-          logger.success('✓ ${config.name} is valid');
+          if (hasSchemaError) {
+            logger.error(
+              '✗ ${config.name} is invalid: schema errors detected',
+            );
+            allValid = false;
+          } else {
+            logger.success('✓ ${config.name} is valid');
+          }
         } on FormatException catch (e) {
           logger.error('✗ ${config.name} is invalid: ${e.message}');
           allValid = false;

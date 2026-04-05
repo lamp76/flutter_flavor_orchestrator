@@ -4,6 +4,10 @@
 # flutter_flavor_orchestrator. Place this file in your project root
 # or add the flavor_config section to your pubspec.yaml.
 
+# Schema version (added in v0.8.0).
+# Required when running `validate --strict`.
+schema_version: 1
+
 # Development flavor
 dev:
   bundle_id: com.example.flavorapp.dev

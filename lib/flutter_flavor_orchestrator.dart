@@ -18,6 +18,8 @@ export 'src/models/provisioning_config.dart';
 export 'src/orchestrator.dart';
 export 'src/processors/android_processor.dart';
 export 'src/processors/ios_processor.dart';
+export 'src/schema/schema_migration.dart';
+export 'src/schema/schema_validator.dart';
 export 'src/utils/backup_manager.dart';
 export 'src/utils/conflict_analyzer.dart';
 export 'src/utils/file_manager.dart';

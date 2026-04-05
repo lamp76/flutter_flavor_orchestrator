@@ -238,6 +238,12 @@ ArgParser _buildValidateCommand() => ArgParser()
     abbr: 'c',
     help: _externalConfigHelp,
   )
+  ..addFlag(
+    'strict',
+    negatable: false,
+    help: 'Enable strict schema validation: fail on missing schema_version '
+        'and on unknown or deprecated keys.',
+  )
   ..addOption(
     'output',
     abbr: 'o',
@@ -443,6 +449,7 @@ Future<void> _handleValidateCommand(
 ) async {
   final verbose = command['verbose'] as bool;
   final configPath = command['config'] as String?;
+  final strict = command['strict'] as bool;
   final outputFormat = parseOutputFormat(command['output'] as String);
   final isJson = outputFormat == OutputFormat.json;
 
@@ -455,17 +462,22 @@ Future<void> _handleValidateCommand(
 
   try {
     if (isJson) {
-      final results = await orchestrator.validateConfigurationsDetailed();
+      final schemaVersion = await orchestrator.getSchemaVersion();
+      final results =
+          await orchestrator.validateConfigurationsDetailed(strict: strict);
       final allValid = results.isNotEmpty &&
           results.every((r) => r['valid'] as bool);
       formatterFor(outputFormat)({
         'command': 'validate',
         'valid': allValid,
+        'schema_version': schemaVersion,
+        'strict': strict,
         'flavors': results,
       });
       exit(allValid ? 0 : 1);
     } else {
-      final valid = await orchestrator.validateConfigurations();
+      final valid =
+          await orchestrator.validateConfigurations(strict: strict);
       exit(valid ? 0 : 1);
     }
   } on FormatException catch (e) {
@@ -720,8 +732,14 @@ EXAMPLES:
   # Validate all configurations
   flutter_flavor_orchestrator validate
 
+  # Strict schema validation (fails on missing schema_version or unknown keys)
+  flutter_flavor_orchestrator validate --strict
+
   # Validate and emit machine-readable JSON result
   flutter_flavor_orchestrator validate --output json
+
+  # Validate with strict schema checking and JSON output
+  flutter_flavor_orchestrator validate --strict --output json
 
   # Validate using an external YAML config file
   flutter_flavor_orchestrator validate --config /secure/jenkins/flavor_config.yaml
@@ -736,5 +754,5 @@ https://github.com/lamp76/flutter_flavor_orchestrator
 
 /// Prints version information.
 void _printVersion() {
-  stdout.writeln('Flutter Flavor Orchestrator v0.7.0');
+  stdout.writeln('Flutter Flavor Orchestrator v0.8.0');
 }
