@@ -191,7 +191,11 @@ final class IosProcessor {
   }
 
   /// Updates a plist value with a custom tag.
-  String _updatePlistValueWithTag(String content, String key, String valueTag) {
+  String _updatePlistValueWithTag(
+    String content,
+    String key,
+    String valueTag,
+  ) {
     final keyPattern = '<key>$key</key>';
     final keyIndex = content.indexOf(keyPattern);
 
@@ -212,7 +216,9 @@ final class IosProcessor {
 
     // Match any plist value type after the key
     final valuePattern = RegExp(
-      r'[\s\n]*(<string>.*?</string>|<integer>.*?</integer>|<real>.*?</real>|<true/>|<false/>|<data>.*?</data>|<date>.*?</date>|<array>.*?</array>|<dict>.*?</dict>)',
+      r'[\s\n]*(<string>.*?</string>|<integer>.*?</integer>'
+      r'|<real>.*?</real>|<true/>|<false/>|<data>.*?</data>'
+      r'|<date>.*?</date>|<array>.*?</array>|<dict>.*?</dict>)',
       multiLine: true,
       dotAll: true,
     );

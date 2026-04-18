@@ -7,7 +7,8 @@ import '../utils/logger.dart';
 /// Processor for Android platform-specific configurations.
 ///
 /// Handles manipulation of Android native files including AndroidManifest.xml,
-/// build.gradle/build.gradle.kts, and provisioning files like google-services.json.
+/// build.gradle/build.gradle.kts, and provisioning files like
+/// google-services.json.
 final class AndroidProcessor {
   /// Creates a new [AndroidProcessor] instance.
   ///
@@ -190,7 +191,8 @@ final class AndroidProcessor {
 
       // Alternative pattern where value comes before name
       final metadataRegexAlt = RegExp(
-        '<meta-data\\s+android:value\\s*=\\s*"[^"]*"[^>]*android:name\\s*=\\s*"${RegExp.escape(key)}"[^>]*/>',
+        '<meta-data\\s+android:value\\s*=\\s*"[^"]*"[^>]*'
+        'android:name\\s*=\\s*"${RegExp.escape(key)}"[^>]*/>',
         multiLine: true,
       );
 
@@ -212,8 +214,8 @@ final class AndroidProcessor {
         // Add new metadata before closing application tag
         final applicationEndRegex = RegExp(r'([ \t]*)</application>');
         if (applicationEndRegex.hasMatch(updatedContent)) {
-          final newMetadata =
-              '$indent<meta-data android:name="$key" android:value="$value" />\n';
+          final newMetadata = '$indent<meta-data android:name="$key" '
+              'android:value="$value" />\n';
           updatedContent = updatedContent.replaceFirstMapped(
             applicationEndRegex,
             (match) => '$newMetadata${match.group(1)}</application>',
@@ -501,7 +503,10 @@ final class AndroidProcessor {
     if (isKotlinScript) {
       // Try Kotlin assignment syntax first
       if (kotlinAssignRegex.hasMatch(content)) {
-        return content.replaceFirst(kotlinAssignRegex, 'compileSdk = $version');
+        return content.replaceFirst(
+          kotlinAssignRegex,
+          'compileSdk = $version',
+        );
       }
       // Try Kotlin function syntax
       if (kotlinFunctionRegex.hasMatch(content)) {

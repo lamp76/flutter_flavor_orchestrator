@@ -454,7 +454,9 @@ android {
       expect(updatedContent, contains('android:value="test_api_key"'));
       expect(
         updatedContent,
-        contains('android:name="firebase.messaging.default_notification_icon"'),
+        contains(
+          'android:name="firebase.messaging.default_notification_icon"',
+        ),
       );
       expect(
         updatedContent,
