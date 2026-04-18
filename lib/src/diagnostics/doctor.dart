@@ -4,6 +4,7 @@ import 'package:path/path.dart' as path;
 import 'package:yaml/yaml.dart';
 
 import '../models/flavor_config.dart';
+import '../utils/logger.dart';
 import 'diagnostic.dart';
 
 /// Preflight diagnostics runner for the Flutter Flavor Orchestrator.
@@ -25,9 +26,11 @@ final class Doctor {
   ///
   /// [projectRoot] is the root directory of the Flutter project.
   /// [configPath] optionally points to an external YAML config file.
+  /// [logger] is used for debug output when the `--debug` flag is active.
   const Doctor({
     required this.projectRoot,
     this.configPath,
+    this.logger = const Logger(),
   });
 
   /// Root directory of the Flutter project being diagnosed.
@@ -35,6 +38,12 @@ final class Doctor {
 
   /// Optional external path to a flavor configuration YAML file.
   final String? configPath;
+
+  /// Logger for debug output.
+  ///
+  /// When created with `Logger(verbose: true)`, all `debug()` calls produce
+  /// output — this corresponds to running `doctor --debug` on the CLI.
+  final Logger logger;
 
   /// Runs all diagnostic checks and returns the aggregated [DoctorResult].
   ///
@@ -45,7 +54,13 @@ final class Doctor {
   }) async {
     final diagnostics = <Diagnostic>[];
 
+    logger.debug(
+      'Doctor starting — projectRoot: $projectRoot, '
+      'platforms: ${platforms.isEmpty ? "none" : platforms.join(", ")}',
+    );
+
     // ── Project-root checks ──────────────────────────────────────────────────
+    logger.debug('Checking project root...');
     final pubspecOk = await _checkProjectRoot(diagnostics);
 
     // ── Config checks ────────────────────────────────────────────────────────
@@ -53,17 +68,26 @@ final class Doctor {
     Map<String, FlavorConfig>? configs;
     int? schemaVersion;
     if (pubspecOk) {
+      logger.debug('Checking flavor config...');
       configs = await _checkConfig(
         diagnostics,
         schemaVersion: (v) => schemaVersion = v,
       );
+      if (configs != null) {
+        logger.debug(
+          'Config loaded: ${configs.length} flavor(s): '
+          '${configs.keys.join(", ")}',
+        );
+      }
     }
 
     // ── Platform checks ──────────────────────────────────────────────────────
     for (final platform in platforms) {
       if (platform == 'android') {
+        logger.debug('Checking Android project structure...');
         await _checkAndroidProject(diagnostics);
       } else if (platform == 'ios') {
+        logger.debug('Checking iOS project structure...');
         await _checkIosProject(diagnostics);
       }
     }
@@ -71,12 +95,16 @@ final class Doctor {
     // ── Per-flavor file reference checks ────────────────────────────────────
     if (configs != null) {
       for (final config in configs.values) {
+        logger.debug(
+          'Checking file references for flavor "${config.name}"...',
+        );
         await _checkFlavorFileRefs(diagnostics, config, platforms: platforms);
       }
     }
 
     // ── Schema version info ──────────────────────────────────────────────────
     if (configs != null && schemaVersion == null) {
+      logger.debug('schema_version key absent from config.');
       diagnostics.add(
         const Diagnostic(
           code: 'schema_version_missing',
@@ -89,7 +117,13 @@ final class Doctor {
       );
     }
 
-    return DoctorResult(diagnostics: diagnostics);
+    final result = DoctorResult(diagnostics: diagnostics);
+    logger.debug(
+      'Doctor complete — ${result.errors.length} error(s), '
+      '${result.warnings.length} warning(s), '
+      '${result.infos.length} info(s).',
+    );
+    return result;
   }
 
   // ── Project-root checks ────────────────────────────────────────────────────
@@ -110,34 +144,45 @@ final class Doctor {
       final resolved = path.isAbsolute(configPath!)
           ? configPath!
           : path.join(projectRoot, configPath!);
+      logger.debug('Checking explicit config path: $resolved');
       if (!await File(resolved).exists()) {
+        logger.debug('Explicit config not found: $resolved');
         diagnostics.add(
           Diagnostic(
             code: 'no_config',
             severity: DiagnosticSeverity.error,
             message: 'Flavor config file not found at: $resolved',
-            suggestion: 'Verify the path passed to `--config` and ensure the '
-                'file exists.',
+            suggestion: 'Verify the path passed to `--config` and '
+                'ensure the file exists.',
             path: resolved,
           ),
         );
         return null;
       }
+      logger.debug('Using explicit config: $resolved');
       return resolved;
     }
 
     final dedicated = path.join(projectRoot, 'flavor_config.yaml');
+    logger.debug('Checking dedicated config: $dedicated');
     if (await File(dedicated).exists()) {
+      logger.debug('Using dedicated config: $dedicated');
       return dedicated;
     }
 
     // Fall back to pubspec.yaml — only if it has a flavor_config section.
     final pubspecPath = path.join(projectRoot, 'pubspec.yaml');
+    logger.debug(
+      'Checking pubspec.yaml for flavor_config section: $pubspecPath',
+    );
     if (await File(pubspecPath).exists()) {
       try {
         final content = await File(pubspecPath).readAsString();
         final parsed = loadYaml(content);
         if (parsed is YamlMap && parsed.containsKey('flavor_config')) {
+          logger.debug(
+            'Using pubspec.yaml (has flavor_config section): $pubspecPath',
+          );
           return pubspecPath;
         }
       } on YamlException {
@@ -145,6 +190,7 @@ final class Doctor {
       }
     }
 
+    logger.debug('No flavor config found in project root: $projectRoot');
     diagnostics.add(
       Diagnostic(
         code: 'no_config',
@@ -167,6 +213,7 @@ final class Doctor {
     final pubspecFile = File(pubspecPath);
 
     if (!await pubspecFile.exists()) {
+      logger.debug('pubspec.yaml not found at: $pubspecPath');
       diagnostics.add(
         Diagnostic(
           code: 'no_pubspec',
@@ -182,6 +229,7 @@ final class Doctor {
       return false;
     }
 
+    logger.debug('pubspec.yaml found at: $pubspecPath');
     return true;
   }
 
@@ -368,6 +416,7 @@ final class Doctor {
   Future<void> _checkAndroidProject(List<Diagnostic> diagnostics) async {
     final androidDir = path.join(projectRoot, 'android');
     if (!await Directory(androidDir).exists()) {
+      logger.debug('Android directory not found: $androidDir');
       diagnostics.add(
         Diagnostic(
           code: 'platform_dir_missing',
@@ -392,6 +441,7 @@ final class Doctor {
       'AndroidManifest.xml',
     );
     if (!await File(manifestPath).exists()) {
+      logger.debug('AndroidManifest.xml not found: $manifestPath');
       diagnostics.add(
         Diagnostic(
           code: 'android_manifest_missing',
@@ -404,14 +454,20 @@ final class Doctor {
           path: manifestPath,
         ),
       );
+    } else {
+      logger.debug('AndroidManifest.xml found: $manifestPath');
     }
 
-    final gradlePath = path.join(projectRoot, 'android', 'app', 'build.gradle');
+    final gradlePath =
+        path.join(projectRoot, 'android', 'app', 'build.gradle');
     final gradleKtsPath =
         path.join(projectRoot, 'android', 'app', 'build.gradle.kts');
 
     if (!await File(gradlePath).exists() &&
         !await File(gradleKtsPath).exists()) {
+      logger.debug(
+        'Neither build.gradle nor build.gradle.kts found in android/app/',
+      );
       diagnostics.add(
         Diagnostic(
           code: 'android_build_gradle_missing',
@@ -425,6 +481,8 @@ final class Doctor {
           path: path.join(projectRoot, 'android', 'app'),
         ),
       );
+    } else {
+      logger.debug('Android build script found.');
     }
   }
 
@@ -432,6 +490,7 @@ final class Doctor {
   Future<void> _checkIosProject(List<Diagnostic> diagnostics) async {
     final iosDir = path.join(projectRoot, 'ios');
     if (!await Directory(iosDir).exists()) {
+      logger.debug('iOS directory not found: $iosDir');
       diagnostics.add(
         Diagnostic(
           code: 'platform_dir_missing',
@@ -450,6 +509,7 @@ final class Doctor {
     final infoPlistPath =
         path.join(projectRoot, 'ios', 'Runner', 'Info.plist');
     if (!await File(infoPlistPath).exists()) {
+      logger.debug('ios/Runner/Info.plist not found: $infoPlistPath');
       diagnostics.add(
         Diagnostic(
           code: 'ios_info_plist_missing',
@@ -461,11 +521,14 @@ final class Doctor {
           path: infoPlistPath,
         ),
       );
+    } else {
+      logger.debug('ios/Runner/Info.plist found: $infoPlistPath');
     }
 
     final xcodeprojPath =
         path.join(projectRoot, 'ios', 'Runner.xcodeproj');
     if (!await Directory(xcodeprojPath).exists()) {
+      logger.debug('ios/Runner.xcodeproj/ not found: $xcodeprojPath');
       diagnostics.add(
         Diagnostic(
           code: 'ios_xcodeproj_missing',
@@ -477,6 +540,8 @@ final class Doctor {
           path: xcodeprojPath,
         ),
       );
+    } else {
+      logger.debug('ios/Runner.xcodeproj/ found: $xcodeprojPath');
     }
   }
 
@@ -499,6 +564,9 @@ final class Doctor {
         final p = path.isAbsolute(prov.androidGoogleServicesPath!)
             ? prov.androidGoogleServicesPath!
             : path.join(projectRoot, prov.androidGoogleServicesPath!);
+        logger.debug(
+          'Checking Android google-services.json source: $p',
+        );
         if (!await File(p).exists()) {
           diagnostics.add(
             Diagnostic(
@@ -507,13 +575,15 @@ final class Doctor {
               message:
                   'Flavor "${config.name}": Android google-services.json '
                   'source file not found.',
-              suggestion:
-                  'Ensure the file exists at "${prov.androidGoogleServicesPath}". '
+              suggestion: 'Ensure the file exists at '
+                  '"${prov.androidGoogleServicesPath}". '
                   'Download it from the Firebase console or update the '
                   '`android_google_services` path in your config.',
               path: p,
             ),
           );
+        } else {
+          logger.debug('Android google-services.json source found: $p');
         }
       }
 
@@ -522,6 +592,9 @@ final class Doctor {
         final p = path.isAbsolute(prov.iosGoogleServicePath!)
             ? prov.iosGoogleServicePath!
             : path.join(projectRoot, prov.iosGoogleServicePath!);
+        logger.debug(
+          'Checking iOS GoogleService-Info.plist source: $p',
+        );
         if (!await File(p).exists()) {
           diagnostics.add(
             Diagnostic(
@@ -530,13 +603,15 @@ final class Doctor {
               message:
                   'Flavor "${config.name}": iOS GoogleService-Info.plist '
                   'source file not found.',
-              suggestion:
-                  'Ensure the file exists at "${prov.iosGoogleServicePath}". '
+              suggestion: 'Ensure the file exists at '
+                  '"${prov.iosGoogleServicePath}". '
                   'Download it from the Firebase console or update the '
                   '`ios_google_service` path in your config.',
               path: p,
             ),
           );
+        } else {
+          logger.debug('iOS GoogleService-Info.plist source found: $p');
         }
       }
 
@@ -546,6 +621,9 @@ final class Doctor {
         final srcAbsolute = path.isAbsolute(src)
             ? src
             : path.join(projectRoot, src);
+        logger.debug(
+          'Checking additional provisioning file: $srcAbsolute',
+        );
         if (!await File(srcAbsolute).exists()) {
           diagnostics.add(
             Diagnostic(
@@ -561,6 +639,8 @@ final class Doctor {
               path: srcAbsolute,
             ),
           );
+        } else {
+          logger.debug('Additional provisioning file found: $srcAbsolute');
         }
       }
     }
@@ -571,6 +651,7 @@ final class Doctor {
       final srcAbsolute = path.isAbsolute(src)
           ? src
           : path.join(projectRoot, src);
+      logger.debug('Checking file_mapping source: $srcAbsolute');
       final srcExists = await File(srcAbsolute).exists() ||
           await Directory(srcAbsolute).exists();
       if (!srcExists) {
@@ -588,6 +669,8 @@ final class Doctor {
             path: srcAbsolute,
           ),
         );
+      } else {
+        logger.debug('File mapping source found: $srcAbsolute');
       }
     }
   }

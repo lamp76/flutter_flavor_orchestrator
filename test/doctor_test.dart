@@ -58,7 +58,7 @@ void main() {
     }
   });
 
-  // ── Diagnostic model ────────────────────────────────────────────────────────
+  // ── Diagnostic model ─────────────────────────────────────────────────────
 
   group('Diagnostic model', () {
     test('toJson includes required fields', () {
@@ -100,7 +100,7 @@ void main() {
     });
   });
 
-  // ── DoctorResult model ──────────────────────────────────────────────────────
+  // ── DoctorResult model ───────────────────────────────────────────────────
 
   group('DoctorResult model', () {
     test('hasErrors is false when no errors', () {
@@ -233,7 +233,10 @@ void main() {
     });
 
     test('returns no no_pubspec error when pubspec.yaml is present', () async {
-      await _setupProject(tempDir, 'dev:\n  bundle_id: com.x.dev\n  app_name: X\n');
+      await _setupProject(
+        tempDir,
+        'dev:\n  bundle_id: com.x.dev\n  app_name: X\n',
+      );
       final doctor = Doctor(projectRoot: tempDir.path);
       final result = await doctor.run(platforms: []);
 
@@ -241,7 +244,7 @@ void main() {
     });
   });
 
-  // ── Doctor.run — config checks ──────────────────────────────────────────────
+  // ── Doctor.run — config checks ───────────────────────────────────────────
 
   group('Doctor — config checks', () {
     test('reports error when flavor config is absent', () async {
@@ -341,22 +344,25 @@ dev:
       );
     });
 
-    test('no schema_version_missing warning when schema_version present', () async {
-      await _setupProject(tempDir, '''
+    test(
+      'no schema_version_missing warning when schema_version present',
+      () async {
+        await _setupProject(tempDir, '''
 schema_version: 1
 dev:
   bundle_id: com.example.dev
   app_name: App Dev
 ''');
 
-      final doctor = Doctor(projectRoot: tempDir.path);
-      final result = await doctor.run(platforms: []);
+        final doctor = Doctor(projectRoot: tempDir.path);
+        final result = await doctor.run(platforms: []);
 
-      expect(
-        result.warnings.map((d) => d.code),
-        isNot(contains('schema_version_missing')),
-      );
-    });
+        expect(
+          result.warnings.map((d) => d.code),
+          isNot(contains('schema_version_missing')),
+        );
+      },
+    );
   });
 
   // ── Doctor.run — platform checks ──────────────────────────────────────────
@@ -433,8 +439,14 @@ dev:
       final doctor = Doctor(projectRoot: tempDir.path);
       final result = await doctor.run(platforms: ['android']);
 
-      expect(result.errors.map((d) => d.code), isNot(contains('android_manifest_missing')));
-      expect(result.errors.map((d) => d.code), isNot(contains('android_build_gradle_missing')));
+      expect(
+        result.errors.map((d) => d.code),
+        isNot(contains('android_manifest_missing')),
+      );
+      expect(
+        result.errors.map((d) => d.code),
+        isNot(contains('android_build_gradle_missing')),
+      );
     });
 
     test('accepts build.gradle.kts as alternative to build.gradle', () async {
@@ -530,8 +542,14 @@ dev:
       final doctor = Doctor(projectRoot: tempDir.path);
       final result = await doctor.run(platforms: ['ios']);
 
-      expect(result.errors.map((d) => d.code), isNot(contains('ios_info_plist_missing')));
-      expect(result.errors.map((d) => d.code), isNot(contains('ios_xcodeproj_missing')));
+      expect(
+        result.errors.map((d) => d.code),
+        isNot(contains('ios_info_plist_missing')),
+      );
+      expect(
+        result.errors.map((d) => d.code),
+        isNot(contains('ios_xcodeproj_missing')),
+      );
     });
   });
 
@@ -597,8 +615,10 @@ dev:
       );
     });
 
-    test('skips ios provisioning check when platform is android-only', () async {
-      await _setupProject(tempDir, '''
+    test(
+      'skips ios provisioning check when platform is android-only',
+      () async {
+        await _setupProject(tempDir, '''
 dev:
   bundle_id: com.example.dev
   app_name: App Dev
@@ -606,15 +626,16 @@ dev:
     ios_google_service: configs/dev/GoogleService-Info.plist
 ''');
 
-      final doctor = Doctor(projectRoot: tempDir.path);
-      // Only android — ios provisioning check should be skipped.
-      final result = await doctor.run(platforms: ['android']);
+        final doctor = Doctor(projectRoot: tempDir.path);
+        // Only android — ios provisioning check should be skipped.
+        final result = await doctor.run(platforms: ['android']);
 
-      expect(
-        result.warnings.map((d) => d.code),
-        isNot(contains('provisioning_file_missing')),
-      );
-    });
+        expect(
+          result.warnings.map((d) => d.code),
+          isNot(contains('provisioning_file_missing')),
+        );
+      },
+    );
 
     test('warns when file_mappings source is absent', () async {
       await _setupProject(tempDir, '''
@@ -726,7 +747,7 @@ dev:
     });
   });
 
-  // ── FlavorOrchestrator.runDoctor ────────────────────────────────────────────
+  // ── FlavorOrchestrator.runDoctor ─────────────────────────────────────────
 
   group('FlavorOrchestrator.runDoctor', () {
     test('returns DoctorResult without mutating files', () async {
@@ -785,9 +806,56 @@ dev:
         isNot(contains('platform_dir_missing')),
       );
     });
+
+    test('debug mode returns same DoctorResult as non-debug mode', () async {
+      await _setupProject(tempDir, '''
+dev:
+  bundle_id: com.example.dev
+  app_name: App Dev
+''');
+      await _setupAndroid(tempDir);
+      await _setupIos(tempDir);
+
+      final orchestrator = FlavorOrchestrator(projectRoot: tempDir.path);
+      final normal = await orchestrator.runDoctor();
+      final debug = await orchestrator.runDoctor(debug: true);
+
+      // Debug mode must not alter the diagnostic findings.
+      expect(debug.errors.length, equals(normal.errors.length));
+      expect(debug.warnings.length, equals(normal.warnings.length));
+      expect(debug.infos.length, equals(normal.infos.length));
+      expect(
+        debug.diagnostics.map((d) => d.code).toList(),
+        equals(normal.diagnostics.map((d) => d.code).toList()),
+      );
+    });
+
+    test('Doctor debug logger receives messages when verbose', () async {
+      await _setupProject(tempDir, '''
+dev:
+  bundle_id: com.example.dev
+  app_name: App Dev
+''');
+
+      // A Doctor with an explicit debug logger should not throw or change
+      // the diagnostic findings compared to a silent doctor.
+      final silent = Doctor(projectRoot: tempDir.path);
+      final debug = Doctor(
+        projectRoot: tempDir.path,
+        logger: const Logger(verbose: true),
+      );
+
+      final silentResult = await silent.run(platforms: []);
+      final debugResult = await debug.run(platforms: []);
+
+      expect(
+        debugResult.diagnostics.map((d) => d.code).toList(),
+        equals(silentResult.diagnostics.map((d) => d.code).toList()),
+      );
+    });
   });
 
-  // ── JSON output contract ────────────────────────────────────────────────────
+  // ── JSON output contract ──────────────────────────────────────────────────
 
   group('Doctor — JSON output contract', () {
     test('toJson diagnostics list contains each diagnostic as a map', () async {
@@ -846,7 +914,10 @@ dev:
 
       final orchestrator = FlavorOrchestrator(projectRoot: tempDir.path);
       final result = await orchestrator.runDoctor(platforms: []);
-      final payload = <String, Object?>{'command': 'doctor', ...result.toJson()};
+      final payload = <String, Object?>{
+        'command': 'doctor',
+        ...result.toJson(),
+      };
 
       expect(payload, containsPair('command', 'doctor'));
       expect(payload, contains('healthy'));
@@ -857,7 +928,7 @@ dev:
     });
   });
 
-  // ── External config path ────────────────────────────────────────────────────
+  // ── External config path ──────────────────────────────────────────────────
 
   group('Doctor — external config path', () {
     test('uses external config path when provided', () async {

@@ -395,7 +395,8 @@ final class FlavorOrchestrator {
   /// human-readable output, use [validateConfigurations] instead.
   ///
   /// Unlike [validateConfigurations], this method does **not** abort on the
-  /// first invalid flavor — it processes every flavor and collects all results.
+  /// first invalid flavor — it processes every flavor and collects all
+  /// results.
   ///
   /// When [strict] is `true`:
   /// - Missing `schema_version` causes a validation error for every flavor.
@@ -714,15 +715,20 @@ final class FlavorOrchestrator {
   /// [platforms] controls which platform-specific checks are executed.
   /// Defaults to both `'android'` and `'ios'`.
   ///
+  /// [debug] enables detailed debug logging from the [Doctor] check runner.
+  /// Set to `true` when the `--debug` flag is passed on the CLI.
+  ///
   /// Exit-code semantics (for the CLI layer):
   /// - Exit `0` when [DoctorResult.hasErrors] is `false`.
   /// - Exit `1` when any error-level finding is present.
   Future<DoctorResult> runDoctor({
     List<String> platforms = const ['android', 'ios'],
+    bool debug = false,
   }) {
     final doctor = Doctor(
       projectRoot: projectRoot,
       configPath: configPath,
+      logger: Logger(verbose: debug, silent: silent),
     );
     return doctor.run(platforms: platforms);
   }

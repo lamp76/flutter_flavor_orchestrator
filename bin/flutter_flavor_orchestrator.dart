@@ -636,7 +636,12 @@ ArgParser _buildDoctorCommand() => ArgParser()
   ..addFlag(
     'verbose',
     negatable: false,
-    help: 'Enable verbose debug output.',
+    help: 'Enable verbose output.',
+  )
+  ..addFlag(
+    'debug',
+    negatable: false,
+    help: 'Enable debug logging for each check step.',
   );
 
 /// Handles the 'doctor' command.
@@ -645,6 +650,7 @@ Future<void> _handleDoctorCommand(
   String projectRoot,
 ) async {
   final verbose = command['verbose'] as bool;
+  final debug = command['debug'] as bool;
   final configPath = command['config'] as String?;
   final platforms = command['platform'] as List<String>;
   final outputFormat = parseOutputFormat(command['output'] as String);
@@ -658,7 +664,10 @@ Future<void> _handleDoctorCommand(
   );
 
   try {
-    final result = await orchestrator.runDoctor(platforms: platforms);
+    final result = await orchestrator.runDoctor(
+      platforms: platforms,
+      debug: debug,
+    );
 
     if (isJson) {
       formatterFor(outputFormat)({'command': 'doctor', ...result.toJson()});
@@ -789,7 +798,8 @@ EXAMPLES:
   flutter_flavor_orchestrator apply --flavor dev
 
   # Apply using an external YAML config file
-  flutter_flavor_orchestrator apply --flavor production --config /secure/jenkins/flavor_config.yaml
+  flutter_flavor_orchestrator apply \
+    --flavor production --config /secure/jenkins/flavor_config.yaml
 
   # Apply only to Android
   flutter_flavor_orchestrator apply --flavor production --platform android
@@ -849,7 +859,8 @@ EXAMPLES:
   flutter_flavor_orchestrator validate --strict --output json
 
   # Validate using an external YAML config file
-  flutter_flavor_orchestrator validate --config /secure/jenkins/flavor_config.yaml
+  flutter_flavor_orchestrator validate \
+    --config /secure/jenkins/flavor_config.yaml
 
   # Rollback and get JSON result
   flutter_flavor_orchestrator rollback --latest --output json
@@ -865,6 +876,9 @@ EXAMPLES:
 
   # Run diagnostics with an external config path
   flutter_flavor_orchestrator doctor --config ./ci/flavor_config.yaml
+
+  # Run diagnostics with step-level debug logging
+  flutter_flavor_orchestrator doctor --debug
 
 For more information, visit:
 https://github.com/lamp76/flutter_flavor_orchestrator
