@@ -191,7 +191,7 @@ final class AndroidProcessor {
 
       // Alternative pattern where value comes before name
       final metadataRegexAlt = RegExp(
-        '<meta-data\\s+android:value\\s*=\\s*"[^"]*"[^>]*'
+        r'<meta-data\s+android:value\s*=\s*"[^"]*"[^>]*'
         'android:name\\s*=\\s*"${RegExp.escape(key)}"[^>]*/>',
         multiLine: true,
       );

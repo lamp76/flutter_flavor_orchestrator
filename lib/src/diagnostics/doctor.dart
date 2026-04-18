@@ -54,13 +54,13 @@ final class Doctor {
   }) async {
     final diagnostics = <Diagnostic>[];
 
-    logger.debug(
-      'Doctor starting — projectRoot: $projectRoot, '
-      'platforms: ${platforms.isEmpty ? "none" : platforms.join(", ")}',
-    );
-
-    // ── Project-root checks ──────────────────────────────────────────────────
-    logger.debug('Checking project root...');
+    logger
+      ..debug(
+        'Doctor starting — projectRoot: $projectRoot, '
+        'platforms: ${platforms.isEmpty ? "none" : platforms.join(", ")}',
+      )
+      // ── Project-root checks ────────────────────────────────────────────────
+      ..debug('Checking project root...');
     final pubspecOk = await _checkProjectRoot(diagnostics);
 
     // ── Config checks ────────────────────────────────────────────────────────
@@ -143,7 +143,7 @@ final class Doctor {
     if (configPath != null && configPath!.trim().isNotEmpty) {
       final resolved = path.isAbsolute(configPath!)
           ? configPath!
-          : path.join(projectRoot, configPath!);
+          : path.join(projectRoot, configPath);
       logger.debug('Checking explicit config path: $resolved');
       if (!await File(resolved).exists()) {
         logger.debug('Explicit config not found: $resolved');
@@ -448,9 +448,9 @@ final class Doctor {
           severity: DiagnosticSeverity.error,
           message: 'AndroidManifest.xml not found.',
           suggestion:
-              'Ensure the file exists at `android/app/src/main/'
-              'AndroidManifest.xml`. Run `flutter create .` to restore '
-              'missing native files.',
+              'Ensure the file exists at '
+              '`android/app/src/main/AndroidManifest.xml`. '
+              'Run `flutter create .` to restore missing native files.',
           path: manifestPath,
         ),
       );
@@ -563,7 +563,7 @@ final class Doctor {
           prov.androidGoogleServicesPath != null) {
         final p = path.isAbsolute(prov.androidGoogleServicesPath!)
             ? prov.androidGoogleServicesPath!
-            : path.join(projectRoot, prov.androidGoogleServicesPath!);
+            : path.join(projectRoot, prov.androidGoogleServicesPath);
         logger.debug(
           'Checking Android google-services.json source: $p',
         );
@@ -591,7 +591,7 @@ final class Doctor {
       if (platforms.contains('ios') && prov.iosGoogleServicePath != null) {
         final p = path.isAbsolute(prov.iosGoogleServicePath!)
             ? prov.iosGoogleServicePath!
-            : path.join(projectRoot, prov.iosGoogleServicePath!);
+            : path.join(projectRoot, prov.iosGoogleServicePath);
         logger.debug(
           'Checking iOS GoogleService-Info.plist source: $p',
         );

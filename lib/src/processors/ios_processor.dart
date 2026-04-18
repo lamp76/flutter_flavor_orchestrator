@@ -217,8 +217,8 @@ final class IosProcessor {
     // Match any plist value type after the key
     final valuePattern = RegExp(
       r'[\s\n]*(<string>.*?</string>|<integer>.*?</integer>'
-      r'|<real>.*?</real>|<true/>|<false/>|<data>.*?</data>'
-      r'|<date>.*?</date>|<array>.*?</array>|<dict>.*?</dict>)',
+      '|<real>.*?</real>|<true/>|<false/>|<data>.*?</data>'
+      '|<date>.*?</date>|<array>.*?</array>|<dict>.*?</dict>)',
       multiLine: true,
       dotAll: true,
     );

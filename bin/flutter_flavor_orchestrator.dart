@@ -691,9 +691,9 @@ void _printDoctorText(DoctorResult result) {
   final status = result.hasErrors ? 'Issues detected' : 'Healthy';
   stdout
     ..writeln()
-    ..writeln('${'=' * 60}')
+    ..writeln('=' * 60)
     ..writeln('  Doctor Report')
-    ..writeln('${'=' * 60}')
+    ..writeln('=' * 60)
     ..writeln();
 
   if (result.diagnostics.isEmpty) {
@@ -714,12 +714,13 @@ void _printDoctorText(DoctorResult result) {
       }
       stdout.writeln();
     }
-    stdout.writeln(
-      'Summary: ${result.errors.length} error(s), '
-      '${result.warnings.length} warning(s), '
-      '${result.infos.length} info(s).',
-    );
-    stdout.writeln('Status:  $icon  $status');
+    stdout
+      ..writeln(
+        'Summary: ${result.errors.length} error(s), '
+        '${result.warnings.length} warning(s), '
+        '${result.infos.length} info(s).',
+      )
+      ..writeln('Status:  $icon  $status');
   }
   stdout.writeln();
 }
@@ -798,7 +799,7 @@ EXAMPLES:
   flutter_flavor_orchestrator apply --flavor dev
 
   # Apply using an external YAML config file
-  flutter_flavor_orchestrator apply \
+  flutter_flavor_orchestrator apply \\
     --flavor production --config /secure/jenkins/flavor_config.yaml
 
   # Apply only to Android
@@ -859,7 +860,7 @@ EXAMPLES:
   flutter_flavor_orchestrator validate --strict --output json
 
   # Validate using an external YAML config file
-  flutter_flavor_orchestrator validate \
+  flutter_flavor_orchestrator validate \\
     --config /secure/jenkins/flavor_config.yaml
 
   # Rollback and get JSON result
