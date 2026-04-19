@@ -297,7 +297,8 @@ final class AssetProcessor {
 
           // Calculate paths relative to project root for logging
           final relativeSourceFile = path.join(relativeSource, relativePath);
-          final relativeDestFile = path.join(relativeDestination, relativePath);
+          final relativeDestFile =
+              path.join(relativeDestination, relativePath);
 
           logger.debug(
             '   • Copying: $relativeSourceFile -> $relativeDestFile',
@@ -337,7 +338,9 @@ final class AssetProcessor {
       if (backupPath != null) {
         final backupDir = Directory(backupPath);
         if (await backupDir.exists()) {
-          logger.warning('   ⚠️  Copy failed, restoring original directory...');
+          logger.warning(
+            '   ⚠️  Copy failed, restoring original directory...',
+          );
 
           // Remove partial copy if it exists
           if (await destDir.exists()) {

@@ -398,46 +398,49 @@ void main() {
       expect(await newDestFile2.readAsString(), equals('// New dev colors'));
     });
 
-    test('merges with existing directory when replace mode disabled', () async {
-      // Create destination directory with existing files
-      final destDir = Directory('${tempDir.path}/lib/config');
-      await destDir.create(recursive: true);
+    test(
+      'merges with existing directory when replace mode disabled',
+      () async {
+        // Create destination directory with existing files
+        final destDir = Directory('${tempDir.path}/lib/config');
+        await destDir.create(recursive: true);
 
-      final existingFile = File('${destDir.path}/existing.dart');
-      await existingFile.writeAsString('// Existing file');
+        final existingFile = File('${destDir.path}/existing.dart');
+        await existingFile.writeAsString('// Existing file');
 
-      // Create source directory with new files
-      final sourceDir = Directory('${tempDir.path}/source/config');
-      await sourceDir.create(recursive: true);
+        // Create source directory with new files
+        final sourceDir = Directory('${tempDir.path}/source/config');
+        await sourceDir.create(recursive: true);
 
-      final newFile = File('${sourceDir.path}/new_file.dart');
-      await newFile.writeAsString('// New file');
+        final newFile = File('${sourceDir.path}/new_file.dart');
+        await newFile.writeAsString('// New file');
 
-      const config = FlavorConfig(
-        name: 'dev',
-        bundleId: 'com.example.dev',
-        appName: 'App Dev',
-        fileMappings: {
-          'lib/config': 'source/config',
-        },
-      );
+        const config = FlavorConfig(
+          name: 'dev',
+          bundleId: 'com.example.dev',
+          appName: 'App Dev',
+          fileMappings: {
+            'lib/config': 'source/config',
+          },
+        );
 
-      final result = await processor.processFileMappings(config);
+        final result = await processor.processFileMappings(config);
 
-      expect(result, equals(1));
+        expect(result, equals(1));
 
-      // Existing file should still be there
-      expect(await existingFile.exists(), isTrue);
-      expect(
-        await existingFile.readAsString(),
-        equals('// Existing file'),
-      );
+        // Existing file should still be there
+        expect(await existingFile.exists(), isTrue);
+        expect(
+          await existingFile.readAsString(),
+          equals('// Existing file'),
+        );
 
-      // New file should also exist
-      final destNewFile = File('${tempDir.path}/lib/config/new_file.dart');
-      expect(await destNewFile.exists(), isTrue);
-      expect(await destNewFile.readAsString(), equals('// New file'));
-    });
+        // New file should also exist
+        final destNewFile = File('${tempDir.path}/lib/config/new_file.dart');
+        expect(await destNewFile.exists(), isTrue);
+        expect(await destNewFile.readAsString(), equals('// New file'));
+      },
+    );
 
     test('restores original directory on copy failure with replace mode',
         () async {

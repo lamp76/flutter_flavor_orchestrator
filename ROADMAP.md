@@ -56,7 +56,7 @@ Each item includes:
 - `SchemaMigration` interface and `SchemaMigrations` registry scaffold.
 - Per-flavor unknown/deprecated key detection with actionable key-path messages.
 
-### `v0.9.0` (diagnostics maturity)
+### ✅ `v0.9.0` (diagnostics maturity)
 - Feature 4 (partial): `doctor` command with core checks and actionable suggestions.
 - JSON output support added to `doctor`.
 
@@ -279,7 +279,7 @@ Speeds onboarding and reduces initial configuration mistakes.
 4. ✅ Conflict detection and destructive-operation guardrails — **done in v0.6.0**
 5. ✅ Output formatter abstraction + JSON output — **done in v0.7.0**
 6. ✅ Schema versioning + strict validation — **done in v0.8.0**
-7. `doctor` command
+7. ✅ `doctor` command — **done in v0.9.0**
 8. Env-var interpolation
 9. `init` command
 

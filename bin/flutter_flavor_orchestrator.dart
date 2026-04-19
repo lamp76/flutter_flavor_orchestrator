@@ -19,6 +19,7 @@ Future<void> main(List<String> arguments) async {
     ..addCommand('validate', _buildValidateCommand())
     ..addCommand('plan', _buildPlanCommand())
     ..addCommand('rollback', _buildRollbackCommand())
+    ..addCommand('doctor', _buildDoctorCommand())
     ..addFlag(
       'help',
       abbr: 'h',
@@ -97,6 +98,8 @@ Future<void> main(List<String> arguments) async {
         await _handlePlanCommand(command, projectRoot);
       case 'rollback':
         await _handleRollbackCommand(command, projectRoot);
+      case 'doctor':
+        await _handleDoctorCommand(command, projectRoot);
       default:
         stderr.writeln('Unknown command: ${command.name}');
         exit(1);
@@ -609,6 +612,119 @@ Future<void> _handlePlanCommand(
   }
 }
 
+/// Builds the argument parser for the 'doctor' command.
+ArgParser _buildDoctorCommand() => ArgParser()
+  ..addOption(
+    'config',
+    abbr: 'c',
+    help: _externalConfigHelp,
+  )
+  ..addMultiOption(
+    'platform',
+    abbr: 'p',
+    allowed: ['android', 'ios'],
+    defaultsTo: ['android', 'ios'],
+    help: 'Target platform(s) to check.',
+  )
+  ..addOption(
+    'output',
+    abbr: 'o',
+    allowed: ['text', 'json'],
+    defaultsTo: 'text',
+    help: _outputHelp,
+  )
+  ..addFlag(
+    'verbose',
+    negatable: false,
+    help: 'Enable verbose output.',
+  )
+  ..addFlag(
+    'debug',
+    negatable: false,
+    help: 'Enable debug logging for each check step.',
+  );
+
+/// Handles the 'doctor' command.
+Future<void> _handleDoctorCommand(
+  ArgResults command,
+  String projectRoot,
+) async {
+  final verbose = command['verbose'] as bool;
+  final debug = command['debug'] as bool;
+  final configPath = command['config'] as String?;
+  final platforms = command['platform'] as List<String>;
+  final outputFormat = parseOutputFormat(command['output'] as String);
+  final isJson = outputFormat == OutputFormat.json;
+
+  final orchestrator = FlavorOrchestrator(
+    projectRoot: projectRoot,
+    configPath: configPath,
+    verbose: verbose,
+    silent: isJson,
+  );
+
+  try {
+    final result = await orchestrator.runDoctor(
+      platforms: platforms,
+      debug: debug,
+    );
+
+    if (isJson) {
+      formatterFor(outputFormat)({'command': 'doctor', ...result.toJson()});
+    } else {
+      _printDoctorText(result);
+    }
+
+    exit(result.hasErrors ? 1 : 0);
+  } on FormatException catch (e) {
+    stderr.writeln('Error: ${e.message}');
+    exit(1);
+  } on FileSystemException catch (e) {
+    stderr.writeln('Error: ${e.message}');
+    exit(1);
+  }
+}
+
+/// Prints a human-readable doctor report to stdout.
+void _printDoctorText(DoctorResult result) {
+  final icon = result.hasErrors ? '❌' : '✅';
+  final status = result.hasErrors ? 'Issues detected' : 'Healthy';
+  stdout
+    ..writeln()
+    ..writeln('=' * 60)
+    ..writeln('  Doctor Report')
+    ..writeln('=' * 60)
+    ..writeln();
+
+  if (result.diagnostics.isEmpty) {
+    stdout.writeln('$icon  $status — no findings.');
+  } else {
+    for (final d in result.diagnostics) {
+      final severityIcon = switch (d.severity) {
+        DiagnosticSeverity.error => '❌',
+        DiagnosticSeverity.warning => '⚠️ ',
+        DiagnosticSeverity.info => 'ℹ️ ',
+      };
+      stdout.writeln('$severityIcon  [${d.code}] ${d.message}');
+      if (d.path != null) {
+        stdout.writeln('     Path: ${d.path}');
+      }
+      if (d.suggestion != null) {
+        stdout.writeln('     Fix:  ${d.suggestion}');
+      }
+      stdout.writeln();
+    }
+    stdout
+      ..writeln(
+        'Summary: ${result.errors.length} error(s), '
+        '${result.warnings.length} warning(s), '
+        '${result.infos.length} info(s).',
+      )
+      ..writeln('Status:  $icon  $status');
+  }
+  stdout.writeln();
+}
+
 /// Prints a human-readable plan summary to stdout.
 void _printPlanText(ExecutionPlan plan) {
   stdout
@@ -673,6 +789,7 @@ COMMANDS:
   list        List all available flavors with mapping/replacement summary
   info        Display detailed flavor info, mappings, and replacement behavior
   validate    Validate all flavor configurations and mapping-related settings
+  doctor      Run preflight diagnostics and check the project setup
 
 GLOBAL OPTIONS:
 ${parser.usage}
@@ -682,7 +799,8 @@ EXAMPLES:
   flutter_flavor_orchestrator apply --flavor dev
 
   # Apply using an external YAML config file
-  flutter_flavor_orchestrator apply --flavor production --config /secure/jenkins/flavor_config.yaml
+  flutter_flavor_orchestrator apply \\
+    --flavor production --config /secure/jenkins/flavor_config.yaml
 
   # Apply only to Android
   flutter_flavor_orchestrator apply --flavor production --platform android
@@ -742,10 +860,26 @@ EXAMPLES:
   flutter_flavor_orchestrator validate --strict --output json
 
   # Validate using an external YAML config file
-  flutter_flavor_orchestrator validate --config /secure/jenkins/flavor_config.yaml
+  flutter_flavor_orchestrator validate \\
+    --config /secure/jenkins/flavor_config.yaml
 
   # Rollback and get JSON result
   flutter_flavor_orchestrator rollback --latest --output json
+
+  # Run preflight diagnostics
+  flutter_flavor_orchestrator doctor
+
+  # Run diagnostics for Android only
+  flutter_flavor_orchestrator doctor --platform android
+
+  # Run diagnostics and get machine-readable JSON result
+  flutter_flavor_orchestrator doctor --output json
+
+  # Run diagnostics with an external config path
+  flutter_flavor_orchestrator doctor --config ./ci/flavor_config.yaml
+
+  # Run diagnostics with step-level debug logging
+  flutter_flavor_orchestrator doctor --debug
 
 For more information, visit:
 https://github.com/lamp76/flutter_flavor_orchestrator
@@ -754,5 +888,5 @@ https://github.com/lamp76/flutter_flavor_orchestrator
 
 /// Prints version information.
 void _printVersion() {
-  stdout.writeln('Flutter Flavor Orchestrator v0.8.0');
+  stdout.writeln('Flutter Flavor Orchestrator v0.9.0');
 }

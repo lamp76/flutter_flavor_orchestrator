@@ -12,7 +12,26 @@
 
 Build-time orchestration for Flutter flavors across Android and iOS. Configure environment-specific app identity, native metadata, provisioning files, and resource mappings from a single YAML source.
 
-## What's New (v0.8.0)
+## What's New (v0.9.0)
+
+- **`doctor` command** — New preflight diagnostics command that checks the
+  project setup and config file before running `apply`, with categorised
+  findings (error / warning / info) and actionable suggestions:
+  ```bash
+  flutter_flavor_orchestrator doctor
+  flutter_flavor_orchestrator doctor --platform android
+  flutter_flavor_orchestrator doctor --output json
+  ```
+- **`doctor --output json`** — Machine-readable JSON with stable top-level
+  keys: `command`, `healthy`, `error_count`, `warning_count`, `info_count`,
+  `diagnostics`.
+- **`Diagnostic` / `DoctorResult` / `Doctor`** — New public API classes for
+  programmatic diagnostics.
+- **`FlavorOrchestrator.runDoctor({platforms})`** — New public method for
+  programmatic preflight checks; returns `DoctorResult` without mutating
+  any files.
+
+## Previous: What's New (v0.8.0)
 
 - **`schema_version` support** — Add `schema_version: 1` at the top of your
   `flavor_config.yaml` to enable strict validation and future migration support.
@@ -117,12 +136,13 @@ Build-time orchestration for Flutter flavors across Android and iOS. Configure e
 - **Atomic directory replacement** - Backup/restore-safe replacement of destination directories
 - **Persistent backup & rollback** — Automatic pre-apply snapshots with checksum validation and `rollback` CLI command
 - **Conflict detection** — Pre-apply duplicate-target and overlapping-destination guardrails; `--force` override
-- **Machine-readable JSON output** — `--output json` for all commands (`list`, `info`, `validate`, `plan`, `rollback`); stable top-level keys for CI automation
+- **Machine-readable JSON output** — `--output json` for all commands (`list`, `info`, `validate`, `plan`, `rollback`, `doctor`); stable top-level keys for CI automation
 - **Strict schema validation** — `validate --strict` rejects unknown/deprecated keys and missing `schema_version` with actionable key-path messages
 - **Schema versioning & migration scaffold** — `schema_version: 1` in config; `SchemaMigration` interface for future format evolution
+- **`doctor` command** — Preflight diagnostics with categorised findings (error/warning/info) and actionable suggestions; `--output json` for CI integration
 - **YAML-driven configuration** - Single declarative config for all flavors
 - **Typed execution plan** - `ExecutionPlan`, `PlannedOperation`, `OperationKind` models with `toJson()`
-- **CLI workflow** - `apply`, `plan`, `rollback`, `list`, `info`, and `validate` commands
+- **CLI workflow** - `apply`, `plan`, `rollback`, `list`, `info`, `validate`, and `doctor` commands
 - **`plan` command** — Preview operations without file mutations; text and JSON output
 - **Validation and error handling** - Pre-checks for config, files, and required fields
 - **Documentation and examples** - Full example project and practical guides
@@ -130,8 +150,9 @@ Build-time orchestration for Flutter flavors across Android and iOS. Configure e
 ## 📋 Table of Contents
 
 - [Installation](#installation)
-- [What's New (v0.7.0)](#whats-new-v070)
-- [Previous: What's New (v0.6.0)](#previous-whats-new-v060)
+- [What's New (v0.9.0)](#whats-new-v090)
+- [Previous: What's New (v0.8.0)](#previous-whats-new-v080)
+- [Previous: What's New (v0.7.0)](#previous-whats-new-v070)
 - [Previous: What's New (v0.5.0)](#previous-whats-new-v050)
 - [Previous: What's New (v0.4.0)](#previous-whats-new-v040)
 - [Quick Start](#quick-start)
@@ -154,7 +175,7 @@ Add `flutter_flavor_orchestrator` to your `pubspec.yaml` dev dependencies:
 
 ```yaml
 dev_dependencies:
-  flutter_flavor_orchestrator: ^0.8.0
+  flutter_flavor_orchestrator: ^0.9.0
 ```
 
 Then run:
@@ -553,6 +574,58 @@ early like text mode does.
 - Schema issues produce `warnings` in the JSON output but do not fail validation
 - Existing configs without `schema_version` continue to work without changes
 
+### Doctor Command
+
+Run preflight diagnostics to check the project setup before running `apply`:
+
+```bash
+# Check both Android and iOS (default)
+flutter_flavor_orchestrator doctor
+
+# Check Android only
+flutter_flavor_orchestrator doctor --platform android
+
+# Check iOS only
+flutter_flavor_orchestrator doctor --platform ios
+
+# Machine-readable JSON result (great for CI)
+flutter_flavor_orchestrator doctor --output json
+
+# Diagnose using an external YAML config
+flutter_flavor_orchestrator doctor --config ./ci/flavor_config.yaml
+```
+
+The doctor runs the following checks (read-only — no files mutated):
+
+| Code | Severity | Description |
+|------|----------|-------------|
+| `no_pubspec` | error | `pubspec.yaml` not found |
+| `no_config` | error | No flavor config found |
+| `config_parse_error` | error | Config is unreadable or malformed |
+| `no_flavor_config_key` | error | Config has no flavor definitions |
+| `platform_dir_missing` | warning | `android/` or `ios/` directory absent |
+| `android_manifest_missing` | error | `AndroidManifest.xml` not found |
+| `android_build_gradle_missing` | error | No `build.gradle` or `.kts` |
+| `ios_info_plist_missing` | error | `ios/Runner/Info.plist` not found |
+| `ios_xcodeproj_missing` | error | `ios/Runner.xcodeproj/` not found |
+| `provisioning_file_missing` | warning | Provisioning source file absent |
+| `file_mapping_source_missing` | warning | `file_mappings` source absent |
+| `schema_version_missing` | warning | `schema_version` absent from config |
+| `config_valid` | info | Config is present and all flavors are valid |
+
+JSON output (`--output json`) returns a stable object:
+- `command` — `"doctor"`
+- `healthy` — `true` when no error-level findings exist
+- `error_count` / `warning_count` / `info_count` — finding counts
+- `diagnostics` — array of finding objects, each with:
+  - `code` — stable code string
+  - `severity` — `"error"`, `"warning"`, or `"info"`
+  - `message` — human-readable description
+  - `suggestion` — actionable remediation hint (omitted for info)
+  - `path` — relevant file/directory path (when applicable)
+
+Exit code is `0` when healthy, `1` when any error-level finding is present.
+
 ### Help
 
 Display help information:
@@ -652,6 +725,9 @@ The package follows Clean Architecture principles:
 ```
 lib/
 ├── src/
+│   ├── diagnostics/         # Diagnostics module (v0.9.0)
+│   │   ├── diagnostic.dart          # Diagnostic, DoctorResult models
+│   │   └── doctor.dart              # Doctor class with composable checks
 │   ├── models/              # Data models
 │   │   ├── execution_plan.dart      # Ordered plan of PlannedOperations (v0.3.0)
 │   │   ├── flavor_config.dart       # FlavorConfig with toJson() (v0.7.0)
@@ -674,6 +750,7 @@ lib/
 │   ├── config_parser.dart  # Configuration parsing; schema validation (v0.8.0)
 │   └── orchestrator.dart   # Main orchestrator; getSchemaVersion(),
 │                           #   validateConfigurationsDetailed(strict) (v0.8.0)
+│                           #   runDoctor({platforms}) (v0.9.0)
 └── flutter_flavor_orchestrator.dart  # Public API
 ```
 
@@ -795,6 +872,10 @@ void main() async {
 - **ConflictReport**: Immutable conflict descriptor with `code`, `severity`, `message`, `conflictingPaths`, and `toJson()`
 - **ConflictSeverity**: Enum — `error`, `warning`
 - **ConflictAnalyzer**: Analyses an `ExecutionPlan` for duplicate and overlapping destinations
+- **Diagnostic**: Immutable diagnostic finding with `code`, `severity`, `message`, `suggestion?`, `path?`, and `toJson()`
+- **DiagnosticSeverity**: Enum — `error`, `warning`, `info`
+- **DoctorResult**: Aggregated diagnostics result with `hasErrors`, `errors`, `warnings`, `infos`, and `toJson()`
+- **Doctor**: Read-only preflight checks runner
 - **ConfigParser**: Configuration parsing and validation
 - **FlavorOrchestrator**: Main orchestration logic
 
@@ -907,13 +988,13 @@ The full roadmap is in [ROADMAP.md](ROADMAP.md). Here is a compact summary of pr
 | **v0.6.0** | Conflict detection — duplicate-target and overlapping-destination guardrails; `apply --force`; `ConflictAnalyzer` public API |
 | **v0.7.0** | Automation contract — `--output json` for `list`, `info`, `validate`, `plan`, `rollback`; `OutputFormatter` public API; `FlavorConfig.toJson()` |
 | **v0.8.0** | Schema hardening — `schema_version` enforcement, `validate --strict`, unknown-key detection with key-path messages, `SchemaMigration` scaffold |
+| **v0.9.0** | Diagnostics — `doctor` command with categorised findings (error/warning/info), actionable suggestions, `--output json` support |
 
 ### Upcoming
 
 | Version | Theme | Key deliverable |
 |---------|-------|----------------|
-| **v0.9.0** | Diagnostics | `doctor` command with categorised findings (error/warning/info) |
-| **v1.0.0** | Stable | Production-ready `doctor`, docs freeze, no breaking changes without migration path |
+| **v1.0.0** | Stable | Production-ready release, docs freeze, no breaking changes without migration path |
 | **v1.1.0** | Post-1.0 | Env-var interpolation (`${VAR:-default}`), `init` command |
 
 ---

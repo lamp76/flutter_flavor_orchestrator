@@ -29,7 +29,8 @@ final class ConfigParser {
 
   /// Parses flavor configuration from a YAML file.
   ///
-  /// First looks for a dedicated `flavor_config.yaml` file in the project root.
+  /// First looks for a dedicated `flavor_config.yaml` file in the project
+  /// root.
   /// If not found, looks for a `flavor_config` section in `pubspec.yaml`.
   ///
   /// [projectRoot] is the root directory of the Flutter project.
@@ -219,7 +220,8 @@ final class ConfigParser {
   /// Looks for `flavor_config.yaml` first, then `pubspec.yaml`, or loads from
   /// an explicit [configPath] if provided.
   ///
-  /// Throws [FileSystemException] or [FormatException] on missing/invalid file.
+  /// Throws [FileSystemException] or [FormatException] on missing/invalid
+  /// file.
   Future<Map<dynamic, dynamic>> _loadConfigYaml(
     String projectRoot,
     String? configPath,

@@ -10,6 +10,8 @@
 library;
 
 export 'src/config_parser.dart';
+export 'src/diagnostics/diagnostic.dart';
+export 'src/diagnostics/doctor.dart';
 export 'src/models/execution_plan.dart';
 export 'src/models/flavor_config.dart';
 export 'src/models/operation_kind.dart';
